@@ -1,0 +1,47 @@
+{
+  "schemaVersion": 1,
+  "id": "blockgamejournal",
+  "version": "${version}",
+  "name": "Blockgame Journal",
+  "description": "(Unofficial) Adds client-side helpers for Blockgame to journal experiences as the player encounters them",
+  "authors": [
+    "bnjc"
+  ],
+  "contact": {
+    "repo": "https://github.com/blackjack26/blockgame-journal",
+    "sources": "https://github.com/blackjack26/blockgame-journal",
+    "issues": "https://github.com/blackjack26/blockgame-journal/issues"
+  },
+  "license": "MIT",
+  "icon": "assets/blockgamejournal/icon.png",
+  "environment": "client",
+  "entrypoints": {
+    "client": [
+      "dev.bnjc.blockgamejournal.client.BlockgameJournalClient"
+    ],
+    "main": [
+      "dev.bnjc.blockgamejournal.BlockgameJournal"
+    ],
+    "modmenu": [
+      "dev.bnjc.blockgamejournal.config.ModMenuImpl"
+    ]
+  },
+  "mixins": [
+    "blockgamejournal.mixins.json"
+  ],
+  "depends": {
+    "fabricloader": ">=${loader_version}",
+    "fabric": "*",
+    "minecraft": "${minecraft_version}",
+    "cloth-config": "*"
+  },
+  "accessWidener": "blockgamejournal.accesswidener",
+  "custom": {
+    "modmenu": {
+      "update_checker": false,
+      "links": {
+        "modmenu.discord": "https://discord.gg/piratesoftware"
+      }
+    }
+  }
+}

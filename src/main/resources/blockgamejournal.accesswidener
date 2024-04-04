@@ -1,0 +1,6 @@
+accessWidener v1 named
+
+# text bars to not search when typing
+accessible field net/minecraft/client/gui/screen/ingame/CreativeInventoryScreen searchBox Lnet/minecraft/client/gui/widget/TextFieldWidget;
+accessible field net/minecraft/client/gui/screen/ingame/AnvilScreen nameField Lnet/minecraft/client/gui/widget/TextFieldWidget;
+accessible field net/minecraft/client/gui/screen/recipebook/RecipeBookWidget searchField Lnet/minecraft/client/gui/widget/TextFieldWidget;
