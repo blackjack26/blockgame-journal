@@ -7,6 +7,7 @@ import dev.bnjc.blockgamejournal.gui.widget.VerticalScrollWidget;
 import dev.bnjc.blockgamejournal.journal.Journal;
 import dev.bnjc.blockgamejournal.journal.JournalEntryBuilder;
 import dev.bnjc.blockgamejournal.util.GuiUtil;
+import dev.bnjc.blockgamejournal.util.SearchUtil;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.screen.Screen;
 import net.minecraft.client.gui.widget.TextFieldWidget;
@@ -148,7 +149,7 @@ public class RecipeJournalScreen extends Screen {
       filtered = this.items;
     } else {
       filtered = this.items.stream()
-          .filter(item -> JournalEntryBuilder.getName(item).toLowerCase(Locale.ROOT).contains(filter.toLowerCase(Locale.ROOT)))
+          .filter(item -> SearchUtil.defaultPredicate(item, filter))
           .toList();
     }
 
