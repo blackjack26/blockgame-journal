@@ -5,13 +5,17 @@ import com.mojang.serialization.codecs.RecordCodecBuilder;
 import lombok.Getter;
 import lombok.Setter;
 import net.minecraft.item.ItemStack;
+import org.jetbrains.annotations.Nullable;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 
 @Getter
 public final class JournalEntry {
   public static final Codec<JournalEntry> CODEC = RecordCodecBuilder.create(instance ->
           instance.group(
+              Codec.STRING.fieldOf("key").forGetter(JournalEntry::getKey),
               Codec.unboundedMap(Codec.STRING, Codec.INT).fieldOf("ingredients").forGetter(JournalEntry::getIngredients),
               Codec.INT.fieldOf("npcId").forGetter(JournalEntry::getNpcId),
               Codec.STRING.fieldOf("npcName").forGetter(JournalEntry::getNpcName),
@@ -20,8 +24,8 @@ public final class JournalEntry {
               Codec.FLOAT.orElse(-1.0f).fieldOf("cost").forGetter(JournalEntry::getCost),
               Codec.STRING.orElse("").fieldOf("requiredClass").forGetter(JournalEntry::getRequiredClass),
               Codec.INT.orElse(-1).fieldOf("requiredLevel").forGetter(JournalEntry::getRequiredLevel)
-          ).apply(instance, (ingredients, npcId, npcName, storedAt, recipeKnown, cost, requiredClass, requiredLevel) -> {
-            JournalEntry entry = new JournalEntry(ingredients, npcId, npcName, storedAt);
+          ).apply(instance, (key, ingredients, npcId, npcName, storedAt, recipeKnown, cost, requiredClass, requiredLevel) -> {
+            JournalEntry entry = new JournalEntry(key, ingredients, npcId, npcName, storedAt);
             entry.setRecipeKnown(recipeKnown);
             entry.setCost(cost);
             entry.setRequiredClass(requiredClass);
@@ -30,6 +34,7 @@ public final class JournalEntry {
           })
   );
 
+  private final String key;
   private final Map<String, Integer> ingredients;
   private final int npcId;
   private final String npcName;
@@ -61,8 +66,11 @@ public final class JournalEntry {
   @Setter
   private int requiredLevel;
 
+  private ItemStack knownItem;
+
   public JournalEntry(
-      Map<String, Integer> ingredients, int npcId, String npcName, Long storedAt) {
+      String key, Map<String, Integer> ingredients, int npcId, String npcName, Long storedAt) {
+    this.key = key;
     this.ingredients = ingredients;
     this.npcId = npcId;
     this.npcName = npcName;
@@ -72,5 +80,34 @@ public final class JournalEntry {
     this.cost = -1.0f;
     this.requiredClass = "";
     this.requiredLevel = -1;
+  }
+
+  public @Nullable ItemStack getItem() {
+    if (Journal.INSTANCE == null) {
+      return null;
+    }
+
+    if (this.knownItem == null) {
+      this.knownItem = Journal.INSTANCE.getKnownItem(this.key);
+    }
+
+    return this.knownItem;
+  }
+
+  public List<ItemStack> getIngredientItems() {
+    if (Journal.INSTANCE == null) {
+      return List.of();
+    }
+
+    List<ItemStack> items = new ArrayList<>();
+    for (Map.Entry<String, Integer> entry : this.ingredients.entrySet()) {
+      ItemStack item = Journal.INSTANCE.getKnownItem(entry.getKey());
+      if (item != null) {
+        item.setCount(entry.getValue());
+        items.add(item);
+      }
+    }
+
+    return items;
   }
 }

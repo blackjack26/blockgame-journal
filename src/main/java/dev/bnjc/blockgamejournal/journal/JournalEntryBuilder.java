@@ -48,8 +48,8 @@ public class JournalEntryBuilder {
     return name;
   }
 
-  public JournalEntry build() {
-    return new JournalEntry(getIngredients(), npc.getId(), npc.getEntityName(), System.currentTimeMillis());
+  public JournalEntry build(String key) {
+    return new JournalEntry(key, getIngredients(), npc.getId(), npc.getEntityName(), System.currentTimeMillis());
   }
 
   private Map<String, Integer> getIngredients() {

@@ -5,9 +5,11 @@ import dev.bnjc.blockgamejournal.BlockgameJournal;
 import dev.bnjc.blockgamejournal.client.BlockgameJournalClient;
 import dev.bnjc.blockgamejournal.gamefeature.GameFeature;
 import dev.bnjc.blockgamejournal.gamefeature.recipetracker.handlers.CraftingStationHandler;
+import dev.bnjc.blockgamejournal.gamefeature.recipetracker.handlers.ProfileHandler;
 import dev.bnjc.blockgamejournal.gamefeature.recipetracker.handlers.RecipePreviewHandler;
 import dev.bnjc.blockgamejournal.gui.screen.RecipeJournalScreen;
 import dev.bnjc.blockgamejournal.journal.Journal;
+import dev.bnjc.blockgamejournal.listener.chat.ReceiveChatListener;
 import dev.bnjc.blockgamejournal.listener.interaction.EntityAttackedListener;
 import dev.bnjc.blockgamejournal.listener.interaction.SlotClickedListener;
 import dev.bnjc.blockgamejournal.listener.screen.ScreenOpenedListener;
@@ -47,6 +49,9 @@ import net.minecraft.util.Formatting;
 import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
 
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+
 public class RecipeTrackerGameFeature extends GameFeature {
   private static final Logger LOGGER = BlockgameJournal.getLogger("Recipe Tracker");
 
@@ -54,12 +59,16 @@ public class RecipeTrackerGameFeature extends GameFeature {
       new KeyBinding("key.blockgamejournal.open_gui", InputUtil.Type.KEYSYM, InputUtil.GLFW_KEY_J, "category.blockgamejournal")
   );
 
+  private static final Pattern BALANCE_PATTERN = Pattern.compile("Balance: ([\\d,]+(?:\\.\\d+)?)\\$");
+
   @Getter
   private final RecipePreviewHandler recipePreviewHandler;
 
   @Getter
   private final CraftingStationHandler craftingStationHandler;
 
+  @Getter
+  private final ProfileHandler profileHandler;
 
   @Getter
   @Nullable
@@ -68,6 +77,7 @@ public class RecipeTrackerGameFeature extends GameFeature {
   public RecipeTrackerGameFeature() {
     this.recipePreviewHandler = new RecipePreviewHandler(this);
     this.craftingStationHandler = new CraftingStationHandler(this);
+    this.profileHandler = new ProfileHandler(this);
   }
 
   @Override
@@ -82,6 +92,7 @@ public class RecipeTrackerGameFeature extends GameFeature {
     EntityAttackedListener.EVENT.register(this::handleEntityAttacked);
     ClientCommandRegistrationCallback.EVENT.register(this::registerCommand);
     ScreenEvents.AFTER_INIT.register(this::handleScreenInit);
+    ReceiveChatListener.EVENT.register(this::handleChatMessage);
 
     ClientTickEvents.START_WORLD_TICK.register((client) -> {
       if (Journal.INSTANCE != null) {
@@ -116,6 +127,10 @@ public class RecipeTrackerGameFeature extends GameFeature {
       return this.craftingStationHandler.handleScreenInventory(packet);
     }
 
+    if (packet.getSyncId() == this.profileHandler.getSyncId()) {
+      return this.profileHandler.handleScreenInventory(packet);
+    }
+
     return ActionResult.PASS;
   }
 
@@ -128,6 +143,7 @@ public class RecipeTrackerGameFeature extends GameFeature {
     // Reset the sync ids
     this.recipePreviewHandler.setSyncId(-1);
     this.craftingStationHandler.setSyncId(-1);
+    this.profileHandler.setSyncId(-1);
 
     if (screenName.equals("Recipe Preview")) {
       return this.recipePreviewHandler.handleOpenScreen(packet);
@@ -135,6 +151,10 @@ public class RecipeTrackerGameFeature extends GameFeature {
 
     // Reset recipe page if no longer on a "Recipe Preview" screen
     this.recipePreviewHandler.reset();
+
+    if (screenName.equals("Your Character")) {
+      return this.profileHandler.handleOpenScreen(packet);
+    }
 
     // Look for screen name "Some Name (#page#/#max#)"
     if (screenName.matches("^([\\w\\s]+)\\s\\(\\d+/\\d+\\)")) {
@@ -164,17 +184,18 @@ public class RecipeTrackerGameFeature extends GameFeature {
   private void handleJoin(ClientPlayNetworkHandler handler, PacketSender sender, MinecraftClient client) {
     // Only load the journal if the player is joining the "mc.blockgame.info" server
     client.execute(() -> {
-      ServerInfo serverInfo = client.getCurrentServerEntry();
-      if (serverInfo == null) {
-        LOGGER.warn("[Blockgame Journal] Not connected to a server");
-        return;
-      }
-
-      String serverAddress = serverInfo.address;
-      if (!serverAddress.equals("mc.blockgame.info")) {
-        LOGGER.warn("[Blockgame Journal] Not connected to the Blockgame server");
-        return;
-      }
+      // TODO: Uncomment
+//      ServerInfo serverInfo = client.getCurrentServerEntry();
+//      if (serverInfo == null) {
+//        LOGGER.warn("[Blockgame Journal] Not connected to a server");
+//        return;
+//      }
+//
+//      String serverAddress = serverInfo.address;
+//      if (!serverAddress.equals("mc.blockgame.info")) {
+//        LOGGER.warn("[Blockgame Journal] Not connected to the Blockgame server");
+//        return;
+//      }
 
       Journal.loadDefault();
     });
@@ -276,6 +297,25 @@ public class RecipeTrackerGameFeature extends GameFeature {
     } else {
       lastAttackedPlayer = null;
     }
+    return ActionResult.PASS;
+  }
+
+  private ActionResult handleChatMessage(MinecraftClient client, String message) {
+    if (Journal.INSTANCE == null) {
+      return ActionResult.PASS;
+    }
+
+    if (!message.startsWith("Balance:")) {
+      return ActionResult.PASS;
+    }
+
+    // Parse "Balance: 19,611.26$" to 19611.26
+    Matcher matcher = BALANCE_PATTERN.matcher(message);
+    if (matcher.find()) {
+      String balanceString = matcher.group(1);
+      Journal.INSTANCE.getMetadata().setPlayerBalance(Float.parseFloat(balanceString.replace(",", "")));
+    }
+
     return ActionResult.PASS;
   }
 

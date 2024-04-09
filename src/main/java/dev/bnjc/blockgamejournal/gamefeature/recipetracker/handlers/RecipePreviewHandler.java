@@ -182,7 +182,8 @@ public class RecipePreviewHandler {
         BlockgameJournal.LOGGER.info("[Blockgame Journal] - [ ] " + JournalEntryBuilder.getName(stack) + " x" + stack.getCount());
       }
 
-      JournalEntry entry = new JournalEntryBuilder(this.ingredients, this.gameFeature.getLastAttackedPlayer()).build();
+      JournalEntry entry = new JournalEntryBuilder(this.ingredients, this.gameFeature.getLastAttackedPlayer())
+          .build(JournalEntryBuilder.getKey(recipeItem));
       KnownItem lastClickedItem = this.gameFeature.getCraftingStationHandler().getLastClickedItem();
 
       if (this.validateEntry(lastClickedItem, entry)) {

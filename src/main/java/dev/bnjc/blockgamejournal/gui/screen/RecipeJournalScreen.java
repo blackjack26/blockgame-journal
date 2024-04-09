@@ -5,7 +5,6 @@ import dev.bnjc.blockgamejournal.gui.widget.ItemListWidget;
 import dev.bnjc.blockgamejournal.gui.widget.SearchWidget;
 import dev.bnjc.blockgamejournal.gui.widget.VerticalScrollWidget;
 import dev.bnjc.blockgamejournal.journal.Journal;
-import dev.bnjc.blockgamejournal.journal.JournalEntryBuilder;
 import dev.bnjc.blockgamejournal.util.GuiUtil;
 import dev.bnjc.blockgamejournal.util.SearchUtil;
 import net.minecraft.client.gui.DrawContext;
@@ -37,6 +36,7 @@ public class RecipeJournalScreen extends Screen {
   private static final int SEARCH_LEFT = 6;
   private static final int SEARCH_TOP = 25;
 
+  private static @Nullable String lastSearch = null;
 
   private int left = 0;
   private int top = 0;
@@ -68,7 +68,7 @@ public class RecipeJournalScreen extends Screen {
     super.init();
 
     // Items
-    this.itemList = new ItemListWidget(left + GRID_LEFT, top + GRID_TOP, GRID_COLUMNS, GRID_ROWS);
+    this.itemList = new ItemListWidget(this, left + GRID_LEFT, top + GRID_TOP, GRID_COLUMNS, GRID_ROWS);
 
     // Scroll
     this.scroll = this.addDrawableChild(new VerticalScrollWidget(
@@ -97,7 +97,7 @@ public class RecipeJournalScreen extends Screen {
     this.search.setDrawsBackground(false);
     this.search.setChangedListener(this::filter);
     this.search.setEditableColor(0xFFFFFF);
-    this.search.setText(this.search.getText());
+    this.search.setText(RecipeJournalScreen.lastSearch);
 
     if (shouldFocusSearch) {
       this.setInitialFocus(this.search);
@@ -144,6 +144,8 @@ public class RecipeJournalScreen extends Screen {
   }
 
   private void filter(@Nullable String filter) {
+    RecipeJournalScreen.lastSearch = filter;
+
     List<ItemStack> filtered;
     if (filter == null || filter.isEmpty()) {
       filtered = this.items;

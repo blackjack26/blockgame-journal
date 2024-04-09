@@ -1,11 +1,13 @@
 package dev.bnjc.blockgamejournal.gui.widget;
 
 import dev.bnjc.blockgamejournal.BlockgameJournal;
+import dev.bnjc.blockgamejournal.gui.screen.RecipeDisplay;
 import dev.bnjc.blockgamejournal.util.GuiUtil;
 import lombok.Getter;
 import lombok.Setter;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.DrawContext;
+import net.minecraft.client.gui.screen.Screen;
 import net.minecraft.client.gui.screen.narration.NarrationMessageBuilder;
 import net.minecraft.client.gui.widget.ClickableWidget;
 import net.minecraft.item.ItemStack;
@@ -21,6 +23,7 @@ import static dev.bnjc.blockgamejournal.gui.screen.RecipeJournalScreen.GRID_SLOT
 public class ItemListWidget extends ClickableWidget {
   private static final Identifier BACKGROUND = GuiUtil.sprite("widgets/slot_background");
 
+  private final Screen parent;
   private final int gridWidth;
   private final int gridHeight;
   private List<ItemStack> items = Collections.emptyList();
@@ -29,9 +32,10 @@ public class ItemListWidget extends ClickableWidget {
   @Setter
   private boolean hideTooltip;
 
-  public ItemListWidget(int x, int y, int gridWidth, int gridHeight) {
+  public ItemListWidget(Screen parent, int x, int y, int gridWidth, int gridHeight) {
     super(x, y, gridWidth * GRID_SLOT_SIZE, gridHeight * GRID_SLOT_SIZE, Text.empty());
 
+    this.parent = parent;
     this.gridWidth = gridWidth;
     this.gridHeight = gridHeight;
   }
@@ -69,6 +73,9 @@ public class ItemListWidget extends ClickableWidget {
 
     ItemStack item = items.get(index);
     BlockgameJournal.LOGGER.info("Clicked on item: {}", item.getName().getString());
+
+    // Open RecipeDisplay screen
+    MinecraftClient.getInstance().setScreen(new RecipeDisplay(item, this.parent));
   }
 
   @Override
