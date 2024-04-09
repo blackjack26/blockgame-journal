@@ -49,7 +49,7 @@ public class JournalEntryBuilder {
   }
 
   public JournalEntry build(String key) {
-    return new JournalEntry(key, getIngredients(), npc.getId(), npc.getEntityName(), System.currentTimeMillis());
+    return new JournalEntry(key, getIngredients(), npc.getEntityName(), System.currentTimeMillis());
   }
 
   private Map<String, Integer> getIngredients() {

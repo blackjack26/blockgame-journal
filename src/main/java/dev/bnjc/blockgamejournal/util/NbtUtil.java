@@ -24,4 +24,17 @@ public class NbtUtil {
 
     return display.getList(ItemStack.LORE_KEY, NbtElement.STRING_TYPE);
   }
+
+  public static Tier getTier(ItemStack stack) {
+    NbtCompound tag = stack.getNbt();
+    if (tag == null) {
+      return Tier.COMMON;
+    }
+
+    if (!tag.contains("MMOITEMS_TIER", NbtElement.STRING_TYPE)) {
+      return Tier.COMMON;
+    }
+
+    return Tier.fromString(tag.getString("MMOITEMS_TIER"));
+  }
 }

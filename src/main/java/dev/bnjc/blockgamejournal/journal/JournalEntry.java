@@ -17,15 +17,14 @@ public final class JournalEntry {
           instance.group(
               Codec.STRING.fieldOf("key").forGetter(JournalEntry::getKey),
               Codec.unboundedMap(Codec.STRING, Codec.INT).fieldOf("ingredients").forGetter(JournalEntry::getIngredients),
-              Codec.INT.fieldOf("npcId").forGetter(JournalEntry::getNpcId),
               Codec.STRING.fieldOf("npcName").forGetter(JournalEntry::getNpcName),
               Codec.LONG.fieldOf("storedAt").forGetter(JournalEntry::getStoredAt),
               Codec.BYTE.orElse((byte) -1).fieldOf("recipeKnown").forGetter(JournalEntry::getRecipeKnown),
               Codec.FLOAT.orElse(-1.0f).fieldOf("cost").forGetter(JournalEntry::getCost),
               Codec.STRING.orElse("").fieldOf("requiredClass").forGetter(JournalEntry::getRequiredClass),
               Codec.INT.orElse(-1).fieldOf("requiredLevel").forGetter(JournalEntry::getRequiredLevel)
-          ).apply(instance, (key, ingredients, npcId, npcName, storedAt, recipeKnown, cost, requiredClass, requiredLevel) -> {
-            JournalEntry entry = new JournalEntry(key, ingredients, npcId, npcName, storedAt);
+          ).apply(instance, (key, ingredients, npcName, storedAt, recipeKnown, cost, requiredClass, requiredLevel) -> {
+            JournalEntry entry = new JournalEntry(key, ingredients,  npcName, storedAt);
             entry.setRecipeKnown(recipeKnown);
             entry.setCost(cost);
             entry.setRequiredClass(requiredClass);
@@ -36,7 +35,6 @@ public final class JournalEntry {
 
   private final String key;
   private final Map<String, Integer> ingredients;
-  private final int npcId;
   private final String npcName;
   private final Long storedAt;
 
@@ -69,10 +67,9 @@ public final class JournalEntry {
   private ItemStack knownItem;
 
   public JournalEntry(
-      String key, Map<String, Integer> ingredients, int npcId, String npcName, Long storedAt) {
+      String key, Map<String, Integer> ingredients, String npcName, Long storedAt) {
     this.key = key;
     this.ingredients = ingredients;
-    this.npcId = npcId;
     this.npcName = npcName;
     this.storedAt = storedAt;
 

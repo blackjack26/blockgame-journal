@@ -138,7 +138,7 @@ public class RecipeJournalScreen extends Screen {
         .stream()
         .map(Journal.INSTANCE::getKnownItem)
         .filter(Objects::nonNull)
-        .sorted(Comparator.<ItemStack, String>comparing(a -> a.getName().getString().toLowerCase(Locale.ROOT)).reversed())
+        .sorted(Comparator.comparing(a -> a.getName().getString().toLowerCase(Locale.ROOT)))
         .toList();
     filter(null);
   }

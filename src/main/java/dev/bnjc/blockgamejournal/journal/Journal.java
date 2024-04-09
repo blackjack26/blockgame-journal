@@ -97,7 +97,7 @@ public class Journal {
     List<JournalEntry> recipeEntries = entries.get(key);
     JournalEntry existingEntry = recipeEntries
         .stream()
-        .filter(e -> e.getIngredients().equals(entry.getIngredients()) && e.getNpcId() == entry.getNpcId())
+        .filter(e -> e.getIngredients().equals(entry.getIngredients()) && e.getNpcName().equals(entry.getNpcName()))
         .findFirst()
         .orElse(null);
     if (existingEntry != null) {
@@ -112,5 +112,13 @@ public class Journal {
 
   public @Nullable ItemStack getKnownItem(String key) {
     return knownItems.get(key);
+  }
+
+  public boolean hasJournalEntry(ItemStack stack) {
+    return this.hasJournalEntry(JournalEntryBuilder.getKey(stack));
+  }
+
+  public boolean hasJournalEntry(String key) {
+    return entries.containsKey(key);
   }
 }

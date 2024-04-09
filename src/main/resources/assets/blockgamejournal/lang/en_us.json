@@ -2,6 +2,7 @@
   "blockgamejournal.close": "Close",
   "blockgamejournal.next_page": "Next Page",
   "blockgamejournal.prev_page": "Previous Page",
+  "blockgamejournal.prev_recipe": "Previous Recipe",
   "blockgamejournal.recipe_journal": "Recipe Journal",
   "blockgamejournal.recipe_journal.no_journal": "Invalid Journal",
   "blockgamejournal.search_hint": "Search..."
