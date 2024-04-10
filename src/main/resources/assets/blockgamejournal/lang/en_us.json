@@ -8,5 +8,14 @@
   "blockgamejournal.recipe_journal": "Recipe Journal",
   "blockgamejournal.recipe_journal.no_journal": "Invalid Journal",
   "blockgamejournal.remove_recipe": "Remove Recipe",
-  "blockgamejournal.search_hint": "Search..."
+  "blockgamejournal.search_hint": "Search...",
+  "category.blockgamejournal": "Blockgame Journal",
+  "key.blockgamejournal.open_gui": "Open Recipe Journal",
+  "text.autoconfig.blockgamejournal.option.generalConfig": "General",
+  "text.autoconfig.blockgamejournal.option.generalConfig.decomposeVanillaItems": "Decompose Vanilla Items",
+  "text.autoconfig.blockgamejournal.option.generalConfig.decomposeVanillaItems.@Tooltip": "Whether recipes should decompose vanilla items into their components.",
+  "text.autoconfig.blockgamejournal.option.storageConfig": "Storage",
+  "text.autoconfig.blockgamejournal.option.storageConfig.backendType": "Storage Type",
+  "text.autoconfig.blockgamejournal.option.storageConfig.backendType.@Tooltip": "The type of storage to use for the recipe journal.",
+  "text.autoconfig.blockgamejournal.title": "Blockgame Journal Options"
 }

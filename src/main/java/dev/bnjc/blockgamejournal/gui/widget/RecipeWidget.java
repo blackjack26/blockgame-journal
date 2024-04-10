@@ -1,10 +1,8 @@
 package dev.bnjc.blockgamejournal.gui.widget;
 
-import com.google.common.collect.ImmutableList;
 import dev.bnjc.blockgamejournal.gui.screen.RecipeDisplay;
 import dev.bnjc.blockgamejournal.journal.Journal;
 import dev.bnjc.blockgamejournal.journal.JournalEntry;
-import dev.bnjc.blockgamejournal.journal.JournalEntryBuilder;
 import dev.bnjc.blockgamejournal.util.GuiUtil;
 import dev.bnjc.blockgamejournal.util.ItemUtil;
 import dev.bnjc.blockgamejournal.util.Profession;
@@ -192,11 +190,18 @@ public class RecipeWidget extends ClickableWidget {
     int y = this.getY() + 2;
     context.drawItem(item, x, y);
 
+    // Item count (in bottom right corner of item)
+    if (this.entry.getCount() > 1) {
+      context.getMatrices().push();
+      context.getMatrices().translate(0.0f, 0.0f, 200.0f);
+      context.drawText(textRenderer, Text.literal("" + this.entry.getCount()).formatted(Formatting.WHITE), x + 8, y + 8, 0x404040, true);
+      context.getMatrices().pop();
+    }
+
     // Title
-    MutableText title = Text.literal(JournalEntryBuilder.getName(item)).formatted(Formatting.BOLD, Formatting.WHITE);
+    MutableText title = Text.literal(ItemUtil.getName(item)).formatted(Formatting.BOLD, Formatting.WHITE);
     List<OrderedText> lines = this.textRenderer.wrapLines(title, this.getWidth() - 20);
     lastY = this.getY() + 20;
-
 
     for (OrderedText oText : lines) {
       int titleX = this.getX() + this.getWidth() / 2 - this.textRenderer.getWidth(oText) / 2;
@@ -313,7 +318,7 @@ public class RecipeWidget extends ClickableWidget {
     int x = this.getX();
 
     for (ItemStack item : entry.getIngredientItems()) {
-      String itemKey = JournalEntryBuilder.getKey(item);
+      String itemKey = ItemUtil.getKey(item);
       int startY = this.lastY;
 
       // Render item
@@ -324,7 +329,7 @@ public class RecipeWidget extends ClickableWidget {
       boolean hasEntry = Journal.INSTANCE != null && Journal.INSTANCE.hasJournalEntry(itemKey);
 
       MutableText text = Text.literal(requiredCount > 0 ? "✖ " : "✔ ").formatted(requiredCount > 0 ? Formatting.DARK_RED : Formatting.DARK_GREEN);
-      MutableText itemText = Text.literal(JournalEntryBuilder.getName(item)).formatted(Formatting.DARK_GRAY);
+      MutableText itemText = Text.literal(ItemUtil.getName(item)).formatted(Formatting.DARK_GRAY);
       if (hasEntry) {
         itemText.formatted(Formatting.UNDERLINE);
       }

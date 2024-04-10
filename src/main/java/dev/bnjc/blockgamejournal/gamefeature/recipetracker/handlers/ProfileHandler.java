@@ -11,18 +11,18 @@ import net.minecraft.item.ItemStack;
 import net.minecraft.nbt.NbtList;
 import net.minecraft.network.packet.s2c.play.InventoryS2CPacket;
 import net.minecraft.network.packet.s2c.play.OpenScreenS2CPacket;
+import net.minecraft.text.MutableText;
 import net.minecraft.util.ActionResult;
 import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
 
 import java.util.List;
-import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 public class ProfileHandler {
   private static final Logger LOGGER = BlockgameJournal.getLogger("Profile Handler");
-  private static final Pattern LEVEL_PATTERN = Pattern.compile("\"text\":\"(\\d+)\"");
+  private static final Pattern LEVEL_PATTERN = Pattern.compile("Level: (\\d+)");
 
   private final RecipeTrackerGameFeature gameFeature;
 
@@ -73,7 +73,12 @@ public class ProfileHandler {
     }
 
     for (int i = 0; i < lore.size(); i++) {
-      String line = lore.getString(i);
+      MutableText textLine = NbtUtil.parseLoreLine(lore.getString(i));
+      if (textLine == null) {
+        continue;
+      }
+
+      String line = textLine.getString();
       if (line.contains(profession == Profession.EINHERJAR ? "Level:" : "Current Level:")) {
         Matcher levelMatcher = LEVEL_PATTERN.matcher(line);
         if (levelMatcher.find()) {

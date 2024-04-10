@@ -5,8 +5,8 @@ import dev.bnjc.blockgamejournal.gui.widget.RecipeWidget;
 import dev.bnjc.blockgamejournal.journal.DecomposedJournalEntry;
 import dev.bnjc.blockgamejournal.journal.Journal;
 import dev.bnjc.blockgamejournal.journal.JournalEntry;
-import dev.bnjc.blockgamejournal.journal.JournalEntryBuilder;
 import dev.bnjc.blockgamejournal.util.GuiUtil;
+import dev.bnjc.blockgamejournal.util.ItemUtil;
 import lombok.Getter;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.DrawContext;
@@ -15,6 +15,7 @@ import net.minecraft.client.gui.screen.Screen;
 import net.minecraft.client.gui.tooltip.Tooltip;
 import net.minecraft.client.gui.widget.TexturedButtonWidget;
 import net.minecraft.item.ItemStack;
+import net.minecraft.recipe.RecipeEntry;
 import net.minecraft.text.Text;
 import net.minecraft.util.Identifier;
 
@@ -56,7 +57,7 @@ public class RecipeDisplay extends Screen {
   }
 
   public RecipeDisplay(ItemStack stack, Screen parent) {
-    this(JournalEntryBuilder.getKey(stack), parent);
+    this(ItemUtil.getKey(stack), parent);
   }
 
   @Override
@@ -210,8 +211,22 @@ public class RecipeDisplay extends Screen {
 
     JournalEntry entry = this.entries.get(this.page);
     for (String ingredient : entry.getIngredients().keySet()) {
-      if (Journal.INSTANCE.hasJournalEntry(ingredient)) {
-        return true;
+      if (ItemUtil.IGNORE_RECIPES.contains(ingredient)) {
+        continue;
+      }
+
+      if (ingredient.startsWith("mmoitems:")) {
+        JournalEntry nextEntry = Journal.INSTANCE.getFirstJournalEntry(ingredient);
+        if (nextEntry != null && !ItemUtil.isRecursiveRecipe(nextEntry, entry.getKey())) {
+          return true;
+        }
+      }
+      else if (ingredient.startsWith("minecraft:") && !ItemUtil.IGNORE_RECIPES.contains(ingredient) && BlockgameJournal.getConfig().getGeneralConfig().decomposeVanillaItems) {
+        Identifier id = new Identifier(ingredient);
+        RecipeEntry<?> recipeEntry = ItemUtil.getRecipe(id);
+        if (recipeEntry != null && !ItemUtil.isRecursiveRecipe(recipeEntry, entry.getKey())) {
+          return true;
+        }
       }
     }
 

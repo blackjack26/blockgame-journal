@@ -1,4 +1,4 @@
-package dev.bnjc.blockgamejournal.journal;
+package dev.bnjc.blockgamejournal.gamefeature.recipetracker.station;
 
 import lombok.Getter;
 import lombok.Setter;
@@ -8,7 +8,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 @Getter
-public class KnownItem {
+public class CraftingStationItem {
   private final ItemStack item;
 
   @Setter
@@ -32,8 +32,12 @@ public class KnownItem {
    */
   private final Map<String, Integer> expectedIngredients;
 
-  public KnownItem(ItemStack item) {
+  public CraftingStationItem(ItemStack item) {
     this.item = item;
     this.expectedIngredients = new HashMap<>();
+  }
+
+  public void addExpectedIngredient(String ingredient, int amount) {
+    this.expectedIngredients.put(ingredient, amount);
   }
 }

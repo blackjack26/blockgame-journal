@@ -2,17 +2,17 @@ package dev.bnjc.blockgamejournal.gamefeature.recipetracker.handlers;
 
 import dev.bnjc.blockgamejournal.BlockgameJournal;
 import dev.bnjc.blockgamejournal.gamefeature.recipetracker.RecipeTrackerGameFeature;
-import dev.bnjc.blockgamejournal.journal.KnownItem;
+import dev.bnjc.blockgamejournal.gamefeature.recipetracker.station.CraftingStationItem;
+import dev.bnjc.blockgamejournal.util.NbtUtil;
 import lombok.Getter;
 import lombok.Setter;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.item.ItemStack;
-import net.minecraft.nbt.NbtCompound;
-import net.minecraft.nbt.NbtElement;
 import net.minecraft.nbt.NbtList;
 import net.minecraft.network.packet.s2c.play.InventoryS2CPacket;
 import net.minecraft.network.packet.s2c.play.OpenScreenS2CPacket;
 import net.minecraft.screen.slot.SlotActionType;
+import net.minecraft.text.MutableText;
 import net.minecraft.util.ActionResult;
 import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
@@ -29,7 +29,7 @@ public class CraftingStationHandler {
   private static final Pattern KNOWLEDGE_PATTERN = Pattern.compile("([✔✖]) Recipe Known");
   private static final Pattern CLASS_PATTERN = Pattern.compile("([✔✖]) Requires (\\d+) in ([A-Za-z]+)");
   private static final Pattern INGREDIENT_HEADER_PATTERN = Pattern.compile("Ingredients:");
-  private static final Pattern INGREDIENT_PATTERN = Pattern.compile("\"(\\d+)\\s([^\"]+)\"");
+  private static final Pattern INGREDIENT_PATTERN = Pattern.compile("([✔✖]) (\\d+) (.+?)$");
 
   private final RecipeTrackerGameFeature gameFeature;
   private final List<ItemStack> inventory = new ArrayList<>();
@@ -40,7 +40,7 @@ public class CraftingStationHandler {
 
   @Getter
   @Nullable
-  private KnownItem lastClickedItem;
+  private CraftingStationItem lastClickedItem;
 
   public CraftingStationHandler(RecipeTrackerGameFeature gameFeature) {
     this.gameFeature = gameFeature;
@@ -82,16 +82,16 @@ public class CraftingStationHandler {
       return ActionResult.PASS;
     }
 
-    this.lastClickedItem = new KnownItem(inventoryItem);
+    this.lastClickedItem = new CraftingStationItem(inventoryItem);
 
     // Log the NBT data of the clicked item
-    NbtCompound tag = this.lastClickedItem.getItem().getNbt();
-    if (tag == null) {
-      LOGGER.warn("[Blockgame Journal] No NBT data found");
+    NbtList loreTag = NbtUtil.getLore(inventoryItem);
+    if (loreTag == null) {
+      LOGGER.warn("[Blockgame Journal] No NBT lore data found");
       return ActionResult.PASS;
     }
 
-    this.parseLoreMetadata(tag);
+    this.parseLoreMetadata(loreTag);
     return ActionResult.PASS;
   }
 
@@ -99,20 +99,12 @@ public class CraftingStationHandler {
    * Parses the metadata from the clicked item's lore. This includes the coin cost, recipe known status, class
    * requirement, and expected ingredients.
    */
-  private void parseLoreMetadata(NbtCompound tag) {
+  private void parseLoreMetadata(NbtList loreTag) {
     if (this.lastClickedItem == null) {
       LOGGER.warn("[Blockgame Journal] No last clicked item found");
       return;
     }
 
-    LOGGER.info("[Blockgame Journal] Tracking lore metadata");
-    NbtCompound displayTag = tag.getCompound("display");
-    if (displayTag == null) {
-      LOGGER.warn("[Blockgame Journal] No display tag found");
-      return;
-    }
-
-    NbtList loreTag = displayTag.getList("Lore", NbtElement.STRING_TYPE);
     if (loreTag == null) {
       LOGGER.warn("[Blockgame Journal] No lore tag found");
       return;
@@ -121,11 +113,24 @@ public class CraftingStationHandler {
     boolean listingIngredients = false;
     for (int i = 0; i < loreTag.size(); i++) {
       String lore = loreTag.getString(i);
+      MutableText text = NbtUtil.parseLoreLine(lore);
+      if (text == null) {
+        LOGGER.warn("[Blockgame Journal] Failed to parse lore line: {}", lore);
+        continue;
+      }
+
+      lore = text.getString();
 
       if (listingIngredients) {
         Matcher ingredientMatcher = INGREDIENT_PATTERN.matcher(lore);
         if (ingredientMatcher.find()) {
-          this.lastClickedItem.getExpectedIngredients().put(ingredientMatcher.group(2), Integer.parseInt(ingredientMatcher.group(1)));
+          String name = ingredientMatcher.group(3);
+          this.lastClickedItem.addExpectedIngredient(name, Integer.parseInt(ingredientMatcher.group(2)));
+          continue;
+        }
+
+        if (lore.isBlank()) {
+          // If we find an empty text, we might have more ingredients on the next line
           continue;
         }
 

@@ -1,9 +1,8 @@
 package dev.bnjc.blockgamejournal.gui.widget;
 
-import dev.bnjc.blockgamejournal.BlockgameJournal;
 import dev.bnjc.blockgamejournal.journal.DecomposedJournalEntry;
 import dev.bnjc.blockgamejournal.journal.Journal;
-import dev.bnjc.blockgamejournal.journal.JournalEntryBuilder;
+import dev.bnjc.blockgamejournal.util.GuiUtil;
 import dev.bnjc.blockgamejournal.util.ItemUtil;
 import dev.bnjc.blockgamejournal.util.Profession;
 import net.minecraft.client.MinecraftClient;
@@ -52,6 +51,12 @@ public class DecompositionListWidget extends ScrollableWidget {
     }
   }
 
+  public void updateYInfo(int y, int height) {
+    this.setY(y);
+    this.setHeight(height);
+    this.visible = true;
+  }
+
   @Override
   protected int getContentsHeight() {
     return this.lastY - this.getY();
@@ -64,6 +69,10 @@ public class DecompositionListWidget extends ScrollableWidget {
 
   @Override
   protected void renderContents(DrawContext context, int mouseX, int mouseY, float delta) {
+    if (!this.visible) {
+      return;
+    }
+
     this.lastY = this.getY() + 2;
     this.renderCost(context);
     this.renderRecipesKnown(context);
@@ -120,9 +129,10 @@ public class DecompositionListWidget extends ScrollableWidget {
 
         // TODO: Get player's known recipes
         MutableText text = Text.literal(recipe.getValue() == 1 ? "✔" : "✖").formatted(recipe.getValue() == 1 ? Formatting.DARK_GREEN : Formatting.DARK_RED);
-        text.append(Text.literal(" Recipe - " + JournalEntryBuilder.getName(item)).formatted(Formatting.DARK_GRAY));
-        context.drawText(textRenderer, text, x + 20, this.lastY + 4, 0x404040, false);
-        this.lastY += 16;
+        text.append(Text.literal(" Recipe - " + ItemUtil.getName(item)).formatted(Formatting.DARK_GRAY));
+
+        this.lastY = GuiUtil.drawMultiLineText(context, textRenderer, x + 20, this.lastY, text, this.getWidth() - 20);
+        this.lastY += 6;
       }
     }
   }
@@ -155,9 +165,9 @@ public class DecompositionListWidget extends ScrollableWidget {
               .literal(" Requires " + entry.getValue() + " in " + entry.getKey())
               .formatted(Formatting.DARK_GRAY)
       );
-      context.drawText(textRenderer, text, x + 20, this.lastY + 4, 0x404040, false);
 
-      this.lastY += 16;
+      this.lastY = GuiUtil.drawMultiLineText(context, textRenderer, x + 20, this.lastY, text, this.getWidth() - 20);
+      this.lastY += 6;
     }
   }
 
@@ -169,31 +179,23 @@ public class DecompositionListWidget extends ScrollableWidget {
     int x = this.getX() + 1;
 
     for (ItemStack item : entry.getIngredientItems()) {
-      String itemKey = JournalEntryBuilder.getKey(item);
-
       // Render item
       context.drawItem(item, x, this.lastY);
 
       // Render text
       int requiredCount = this.requiredItems(item);
-      boolean hasEntry = Journal.INSTANCE != null && Journal.INSTANCE.hasJournalEntry(itemKey);
+
+      // TODO: Vanilla recipe display?
 
       MutableText text = Text.literal(requiredCount > 0 ? "✖ " : "✔ ").formatted(requiredCount > 0 ? Formatting.DARK_RED : Formatting.DARK_GREEN);
-      MutableText itemText = Text.literal(JournalEntryBuilder.getName(item)).formatted(Formatting.DARK_GRAY);
-      if (hasEntry) {
-        itemText.formatted(Formatting.UNDERLINE);
-      }
+      MutableText itemText = Text.literal(ItemUtil.getName(item)).formatted(Formatting.DARK_GRAY);
       text.append(itemText);
 
       if (item.getCount() > 1) {
         text.append(Text.literal(" x" + item.getCount()).formatted(Formatting.DARK_GRAY));
       }
 
-      List<OrderedText> lines = this.textRenderer.wrapLines(text, this.getWidth() - 20);
-      for (OrderedText oText : lines) {
-        context.drawText(textRenderer, oText, x + 20, this.lastY + 4, 0x404040, false);
-        this.lastY += 10;
-      }
+      this.lastY = GuiUtil.drawMultiLineText(context, this.textRenderer, x + 20, this.lastY, text, this.getWidth() - 20);
       this.lastY += 6;
     }
   }

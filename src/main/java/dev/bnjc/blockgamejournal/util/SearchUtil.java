@@ -1,6 +1,5 @@
 package dev.bnjc.blockgamejournal.util;
 
-import dev.bnjc.blockgamejournal.journal.JournalEntryBuilder;
 import net.minecraft.item.ItemStack;
 import net.minecraft.nbt.NbtList;
 import org.apache.commons.lang3.StringUtils;
@@ -11,7 +10,7 @@ public class SearchUtil {
   }
 
   public static boolean namePredicate(ItemStack stack, String filter) {
-    return StringUtils.containsIgnoreCase(JournalEntryBuilder.getName(stack), filter);
+    return StringUtils.containsIgnoreCase(ItemUtil.getName(stack), filter);
   }
 
   public static boolean lorePredicate(ItemStack stack, String filter) {

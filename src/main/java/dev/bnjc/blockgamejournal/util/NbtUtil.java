@@ -4,6 +4,8 @@ import net.minecraft.item.ItemStack;
 import net.minecraft.nbt.NbtCompound;
 import net.minecraft.nbt.NbtElement;
 import net.minecraft.nbt.NbtList;
+import net.minecraft.text.MutableText;
+import net.minecraft.text.Text;
 import org.jetbrains.annotations.Nullable;
 
 public class NbtUtil {
@@ -23,6 +25,18 @@ public class NbtUtil {
     }
 
     return display.getList(ItemStack.LORE_KEY, NbtElement.STRING_TYPE);
+  }
+
+  public static @Nullable MutableText parseLoreLine(String line) {
+    if (line.isEmpty()) {
+      return null;
+    }
+
+    try {
+      return Text.Serializer.fromJson(line);
+    } catch (Exception e) {
+      return null;
+    }
   }
 
   public static Tier getTier(ItemStack stack) {

@@ -9,5 +9,9 @@ import me.shedaniel.autoconfig.serializer.PartitioningSerializer;
 public class ModConfig extends PartitioningSerializer.GlobalData {
   @Getter
   @ConfigEntry.Gui.CollapsibleObject(startExpanded = true)
+  GeneralConfig generalConfig = new GeneralConfig();
+
+  @Getter
+  @ConfigEntry.Gui.CollapsibleObject(startExpanded = true)
   StorageConfig storageConfig = new StorageConfig();
 }

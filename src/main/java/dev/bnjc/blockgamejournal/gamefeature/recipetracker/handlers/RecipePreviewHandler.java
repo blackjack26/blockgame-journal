@@ -2,11 +2,11 @@ package dev.bnjc.blockgamejournal.gamefeature.recipetracker.handlers;
 
 import dev.bnjc.blockgamejournal.BlockgameJournal;
 import dev.bnjc.blockgamejournal.gamefeature.recipetracker.RecipeTrackerGameFeature;
-import dev.bnjc.blockgamejournal.gamefeature.recipetracker.TrackRecipeItem;
 import dev.bnjc.blockgamejournal.journal.Journal;
 import dev.bnjc.blockgamejournal.journal.JournalEntry;
 import dev.bnjc.blockgamejournal.journal.JournalEntryBuilder;
-import dev.bnjc.blockgamejournal.journal.KnownItem;
+import dev.bnjc.blockgamejournal.gamefeature.recipetracker.station.CraftingStationItem;
+import dev.bnjc.blockgamejournal.util.ItemUtil;
 import lombok.Getter;
 import lombok.Setter;
 import net.minecraft.entity.player.PlayerEntity;
@@ -18,7 +18,6 @@ import net.minecraft.network.packet.s2c.play.InventoryS2CPacket;
 import net.minecraft.network.packet.s2c.play.OpenScreenS2CPacket;
 import net.minecraft.screen.slot.SlotActionType;
 import net.minecraft.util.ActionResult;
-import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
 
@@ -151,7 +150,7 @@ public class RecipePreviewHandler {
     ItemStack recipeItem = inventory.get(ITEM_INDEX);
 
     // Store the recipe in the player's journal
-    BlockgameJournal.LOGGER.info("[Blockgame Journal] Storing recipe for " + recipeItem.getName().getString());
+    BlockgameJournal.LOGGER.debug("[Blockgame Journal] Storing recipe for {}", ItemUtil.getName(recipeItem));
 
     // Only store the ingredients if they haven't been stored yet
     if (this.ingredients.size() - 1 < recipePage * RECIPE_SLOTS.length) {
@@ -165,7 +164,7 @@ public class RecipePreviewHandler {
         this.ingredients.add(item);
       }
     } else {
-      BlockgameJournal.LOGGER.info("[Blockgame Journal] Ingredients already stored for page {}", recipePage);
+      BlockgameJournal.LOGGER.debug("[Blockgame Journal] Ingredients already stored for page {}", recipePage);
     }
 
     if (this.ingredients.isEmpty()) {
@@ -176,40 +175,43 @@ public class RecipePreviewHandler {
     if (!hasNextPageButton) {
       // Add or update all the known ingredients
       for (ItemStack stack : this.ingredients) {
-        String ingredientKey = JournalEntryBuilder.getKey(stack);
-        Journal.INSTANCE.getKnownItems().put(ingredientKey, stack);
+        String ingredientKey = ItemUtil.getKey(stack);
 
-        BlockgameJournal.LOGGER.info("[Blockgame Journal] - [ ] " + JournalEntryBuilder.getName(stack) + " x" + stack.getCount());
+        // Do not store "minecraft:" items
+        if (!ingredientKey.startsWith("minecraft:")) {
+          Journal.INSTANCE.getKnownItems().put(ingredientKey, stack);
+        }
+
+        BlockgameJournal.LOGGER.debug("[Blockgame Journal] - [ ] {} x{}", ItemUtil.getName(stack), stack.getCount());
       }
 
-      JournalEntry entry = new JournalEntryBuilder(this.ingredients, this.gameFeature.getLastAttackedPlayer())
-          .build(JournalEntryBuilder.getKey(recipeItem));
-      KnownItem lastClickedItem = this.gameFeature.getCraftingStationHandler().getLastClickedItem();
+      JournalEntry entry = new JournalEntryBuilder(this.ingredients, this.gameFeature.getLastAttackedPlayer()).build(recipeItem);
+      CraftingStationItem lastClickedItem = this.gameFeature.getCraftingStationHandler().getLastClickedItem();
 
       if (this.validateEntry(lastClickedItem, entry)) {
         if (lastClickedItem != null) {
           float cost = lastClickedItem.getCost();
           entry.setCost(cost);
           if (cost != -1f) {
-            LOGGER.info("[Blockgame Journal] - [ ] {} Coins", cost);
+            LOGGER.debug("[Blockgame Journal] - [ ] {} Coins", cost);
           }
 
           byte recipeKnown = lastClickedItem.getRecipeKnown();
           entry.setRecipeKnown(recipeKnown);
           if (recipeKnown != -1) {
-            LOGGER.info("[Blockgame Journal] - [{}] Recipe Known", recipeKnown == 1 ? "X" : " ");
+            LOGGER.debug("[Blockgame Journal] - [{}] Recipe Known", recipeKnown == 1 ? "X" : " ");
           }
 
           String requiredClass = lastClickedItem.getRequiredClass();
           entry.setRequiredClass(requiredClass);
           if (requiredClass != null && !requiredClass.isEmpty()) {
-            LOGGER.info("[Blockgame Journal] - [ ] Required Class: {}", requiredClass);
+            LOGGER.debug("[Blockgame Journal] - [ ] Required Class: {}", requiredClass);
           }
 
           int requiredLevel = lastClickedItem.getRequiredLevel();
           entry.setRequiredLevel(requiredLevel);
           if (requiredLevel != -1) {
-            LOGGER.info("[Blockgame Journal] - [ ] Required Level: {}", requiredLevel);
+            LOGGER.debug("[Blockgame Journal] - [ ] Required Level: {}", requiredLevel);
           }
         }
         Journal.INSTANCE.addEntry(recipeItem, entry);
@@ -221,20 +223,28 @@ public class RecipePreviewHandler {
     }
   }
 
-  private boolean validateEntry(@Nullable KnownItem item, JournalEntry entry) {
+  private boolean validateEntry(@Nullable CraftingStationItem item, JournalEntry entry) {
     // Validate the ingredients of the recipe
-    BlockgameJournal.LOGGER.info("[Blockgame Journal] Validating ingredients...");
+    BlockgameJournal.LOGGER.debug("[Blockgame Journal] Validating ingredients...");
 
     if (Journal.INSTANCE == null) {
       BlockgameJournal.LOGGER.warn("[Blockgame Journal] Journal is not loaded");
       return false;
     }
 
+    // Validate we can from clicking the item
     if (item == null) {
       BlockgameJournal.LOGGER.warn("[Blockgame Journal] No last clicked item found");
       return false;
     }
 
+    // Validate the recipe keys match
+    if (!ItemUtil.getKey(item.getItem()).equals(entry.getKey())) {
+      BlockgameJournal.LOGGER.warn("[Blockgame Journal] Recipe key mismatch. Expected: {}, Actual: {}", ItemUtil.getKey(item.getItem()), entry.getKey());
+      return false;
+    }
+
+    // Validate the expected ingredients
     if (item.getExpectedIngredients().isEmpty()) {
       BlockgameJournal.LOGGER.warn("[Blockgame Journal] No expected ingredients found");
       return false;
@@ -245,7 +255,7 @@ public class RecipePreviewHandler {
       return false;
     }
 
-      // TODO: Fix this matching
+    // TODO: Fix this matching
 //    Set<String> ingredientKeys = entry.getIngredients().keySet();
 //    for (String key : ingredientKeys) {
 //      ItemStack stack = Journal.INSTANCE.getKnownItem(key);
@@ -253,13 +263,13 @@ public class RecipePreviewHandler {
 //        BlockgameJournal.LOGGER.warn("[Blockgame Journal] Ingredient not known: {}", key);
 //        return false;
 //      }
-
-//      String itemName = JournalEntryBuilder.getName(stack);
+//
+//      String itemName = ItemUtil.getName(stack);
 //      if (!item.getExpectedIngredients().containsKey(itemName)) {
 //        BlockgameJournal.LOGGER.warn("[Blockgame Journal] Ingredient not expected: {}", itemName);
 //        return false;
 //      }
-
+//
 //      int expectedAmount = item.getExpectedIngredients().get(itemName);
 //      int actualAmount = entry.getIngredients().get(key);
 //      if (expectedAmount != actualAmount) {

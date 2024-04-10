@@ -2,8 +2,8 @@ package dev.bnjc.blockgamejournal.gui.screen;
 
 import dev.bnjc.blockgamejournal.gui.widget.DecompositionListWidget;
 import dev.bnjc.blockgamejournal.journal.DecomposedJournalEntry;
-import dev.bnjc.blockgamejournal.journal.JournalEntryBuilder;
 import dev.bnjc.blockgamejournal.util.GuiUtil;
+import dev.bnjc.blockgamejournal.util.ItemUtil;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.screen.ButtonTextures;
@@ -51,6 +51,7 @@ public class DecompositionDisplay extends Screen {
 
     // List widget
     this.listWidget = new DecompositionListWidget(this.entry, this.left + 8, titleBottom + 8, MENU_WIDTH - 20, MENU_HEIGHT - (titleBottom - this.top) - 16);
+    this.listWidget.visible = false;
     this.addDrawableChild(this.listWidget);
 
     // Close button
@@ -115,11 +116,18 @@ public class DecompositionDisplay extends Screen {
     int y = this.top + 12;
     context.drawItem(item, x, y);
 
+    // Item count (in bottom right corner of item)
+    if (this.entry.getCount() > 1) {
+      context.getMatrices().push();
+      context.getMatrices().translate(0.0f, 0.0f, 200.0f);
+      context.drawText(textRenderer, Text.literal("" + this.entry.getCount()).formatted(Formatting.WHITE), x + 8, y + 8, 0x404040, true);
+      context.getMatrices().pop();
+    }
+
     // Title
-    MutableText title = Text.literal(JournalEntryBuilder.getName(item)).formatted(Formatting.BOLD, Formatting.WHITE);
+    MutableText title = Text.literal(ItemUtil.getName(item)).formatted(Formatting.BOLD, Formatting.WHITE);
     List<OrderedText> lines = this.textRenderer.wrapLines(title, MENU_WIDTH - 20);
     titleBottom = y + 18;
-
 
     for (OrderedText oText : lines) {
       int titleX = this.left + MENU_WIDTH / 2 - this.textRenderer.getWidth(oText) / 2;
@@ -128,7 +136,6 @@ public class DecompositionDisplay extends Screen {
     }
 
     // Update list widget position
-    this.listWidget.setY(titleBottom + 8);
-    this.listWidget.setHeight(MENU_HEIGHT - (titleBottom - this.top) - 16);
+    this.listWidget.updateYInfo(titleBottom + 8, MENU_HEIGHT - (titleBottom - this.top) - 16);
   }
 }
