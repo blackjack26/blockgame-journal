@@ -89,8 +89,8 @@ public class RecipePreviewHandler {
 
     this.storeRecipe(inv);
 
-    // Add the track button to the inventory
-    packet.getContents().set(TRACK_BUTTON_INDEX, new TrackRecipeItem().getItemStack());
+    // TODO: Add the track button to the inventory
+//    packet.getContents().set(TRACK_BUTTON_INDEX, new TrackRecipeItem().getItemStack());
     return ActionResult.PASS;
   }
 
@@ -245,27 +245,28 @@ public class RecipePreviewHandler {
       return false;
     }
 
-    Set<String> ingredientKeys = entry.getIngredients().keySet();
-    for (String key : ingredientKeys) {
-      ItemStack stack = Journal.INSTANCE.getKnownItem(key);
-      if (stack == null) {
-        BlockgameJournal.LOGGER.warn("[Blockgame Journal] Ingredient not known: {}", key);
-        return false;
-      }
+      // TODO: Fix this matching
+//    Set<String> ingredientKeys = entry.getIngredients().keySet();
+//    for (String key : ingredientKeys) {
+//      ItemStack stack = Journal.INSTANCE.getKnownItem(key);
+//      if (stack == null) {
+//        BlockgameJournal.LOGGER.warn("[Blockgame Journal] Ingredient not known: {}", key);
+//        return false;
+//      }
 
-      String itemName = JournalEntryBuilder.getName(stack);
-      if (!item.getExpectedIngredients().containsKey(itemName)) {
-        BlockgameJournal.LOGGER.warn("[Blockgame Journal] Ingredient not expected: {}", itemName);
-        return false;
-      }
+//      String itemName = JournalEntryBuilder.getName(stack);
+//      if (!item.getExpectedIngredients().containsKey(itemName)) {
+//        BlockgameJournal.LOGGER.warn("[Blockgame Journal] Ingredient not expected: {}", itemName);
+//        return false;
+//      }
 
-      int expectedAmount = item.getExpectedIngredients().get(itemName);
-      int actualAmount = entry.getIngredients().get(key);
-      if (expectedAmount != actualAmount) {
-        BlockgameJournal.LOGGER.warn("[Blockgame Journal] Ingredient amount mismatch: {} (expected: {}, actual: {})", key, expectedAmount, actualAmount);
-        return false;
-      }
-    }
+//      int expectedAmount = item.getExpectedIngredients().get(itemName);
+//      int actualAmount = entry.getIngredients().get(key);
+//      if (expectedAmount != actualAmount) {
+//        BlockgameJournal.LOGGER.warn("[Blockgame Journal] Ingredient amount mismatch: {} (expected: {}, actual: {})", key, expectedAmount, actualAmount);
+//        return false;
+//      }
+//    }
 
     return true;
   }

@@ -1,11 +1,13 @@
 package dev.bnjc.blockgamejournal.gui.widget;
 
-import dev.bnjc.blockgamejournal.BlockgameJournal;
+import com.google.common.collect.ImmutableList;
 import dev.bnjc.blockgamejournal.gui.screen.RecipeDisplay;
 import dev.bnjc.blockgamejournal.journal.Journal;
 import dev.bnjc.blockgamejournal.journal.JournalEntry;
 import dev.bnjc.blockgamejournal.journal.JournalEntryBuilder;
 import dev.bnjc.blockgamejournal.util.GuiUtil;
+import dev.bnjc.blockgamejournal.util.ItemUtil;
+import dev.bnjc.blockgamejournal.util.Profession;
 import lombok.Setter;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.font.TextRenderer;
@@ -25,6 +27,7 @@ import net.minecraft.util.Formatting;
 import net.minecraft.util.math.MathHelper;
 import org.jetbrains.annotations.Nullable;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -35,7 +38,7 @@ public class RecipeWidget extends ClickableWidget {
 
   @Setter
   private @Nullable JournalEntry entry;
-  private PlayerInventory inventory;
+  private List<ItemStack> inventory;
 
   private double scrollY;
   private int scrollTop;
@@ -58,7 +61,11 @@ public class RecipeWidget extends ClickableWidget {
     // Populate inventory
     Entity entity = MinecraftClient.getInstance().getCameraEntity();
     if (entity instanceof ClientPlayerEntity player) {
-      this.inventory = player.getInventory();
+      PlayerInventory inv = player.getInventory();
+      this.inventory = new ArrayList<>();
+      this.inventory.addAll(inv.main);
+      this.inventory.addAll(inv.armor);
+      this.inventory.addAll(inv.offHand);
     }
   }
 
@@ -271,7 +278,12 @@ public class RecipeWidget extends ClickableWidget {
 
     int x = this.getX();
 
-    context.drawItem(new ItemStack(Items.TURTLE_EGG), x, this.lastY);
+    Profession profession = Profession.fromClass(entry.getRequiredClass());
+    if (profession == null) {
+      return;
+    }
+
+    context.drawItem(new ItemStack(profession.getItem()), x, this.lastY);
 
     MutableText text = Text.empty();
     if (Journal.INSTANCE == null || Journal.INSTANCE.getMetadata().getProfessionLevels().get(entry.getRequiredClass()) == null) {
@@ -346,14 +358,10 @@ public class RecipeWidget extends ClickableWidget {
       return stack.getCount();
     }
 
-    if (!this.inventory.contains(stack)) {
-      return stack.getCount();
-    }
-
     // Check if the inventory contains the required count
     int requiredCount = stack.getCount();
-    for (ItemStack item : this.inventory.main) {
-      if (item.getItem() == stack.getItem()) {
+    for (ItemStack item : this.inventory) {
+      if (ItemUtil.isItemEqual(item, stack)) {
         requiredCount -= item.getCount();
       }
     }

@@ -7,6 +7,7 @@ import dev.bnjc.blockgamejournal.journal.Journal;
 import dev.bnjc.blockgamejournal.journal.JournalEntry;
 import dev.bnjc.blockgamejournal.journal.JournalEntryBuilder;
 import dev.bnjc.blockgamejournal.util.GuiUtil;
+import lombok.Getter;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.screen.ButtonTextures;
@@ -29,6 +30,7 @@ public class RecipeDisplay extends Screen {
   private static final int MENU_HEIGHT = 156;
 
   private final String key;
+  @Getter
   private final Screen parent;
   private List<JournalEntry> entries;
 
@@ -160,7 +162,7 @@ public class RecipeDisplay extends Screen {
           }
 
           DecomposedJournalEntry decomposed = this.entries.get(this.page).decompose();
-          BlockgameJournal.LOGGER.info(decomposed.toString());
+          MinecraftClient.getInstance().setScreen(new DecompositionDisplay(decomposed, this));
         }
     );
     this.decomposeButton.setTooltip(Tooltip.of(Text.translatable("blockgamejournal.decompose_recipe")));

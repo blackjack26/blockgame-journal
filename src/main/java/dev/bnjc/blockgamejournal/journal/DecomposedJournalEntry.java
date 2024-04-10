@@ -1,6 +1,8 @@
 package dev.bnjc.blockgamejournal.journal;
 
 import lombok.Getter;
+import net.minecraft.item.ItemStack;
+import org.jetbrains.annotations.Nullable;
 
 import java.util.*;
 
@@ -13,6 +15,8 @@ public class DecomposedJournalEntry {
   private Map<String, Integer> professions;
   private Map<String, Byte> knownRecipes;
 
+  private ItemStack knownItem;
+
   public DecomposedJournalEntry(String key) {
     this.key = key;
     this.cost = 0.0f;
@@ -20,6 +24,35 @@ public class DecomposedJournalEntry {
     this.npcNames = new HashSet<>();
     this.professions = new HashMap<>();
     this.knownRecipes = new HashMap<>();
+  }
+
+  public @Nullable ItemStack getItem() {
+    if (Journal.INSTANCE == null) {
+      return null;
+    }
+
+    if (this.knownItem == null) {
+      this.knownItem = Journal.INSTANCE.getKnownItem(this.key);
+    }
+
+    return this.knownItem;
+  }
+
+  public List<ItemStack> getIngredientItems() {
+    if (Journal.INSTANCE == null) {
+      return List.of();
+    }
+
+    List<ItemStack> items = new ArrayList<>();
+    for (Map.Entry<String, Integer> entry : this.ingredients.entrySet()) {
+      ItemStack item = Journal.INSTANCE.getKnownItem(entry.getKey());
+      if (item != null) {
+        item.setCount(entry.getValue());
+        items.add(item);
+      }
+    }
+
+    return items;
   }
 
   public static DecomposedJournalEntry decompose(JournalEntry entry) {

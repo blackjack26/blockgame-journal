@@ -72,7 +72,6 @@ public class ItemListWidget extends ClickableWidget {
     }
 
     ItemStack item = items.get(index);
-    BlockgameJournal.LOGGER.info("Clicked on item: {}", item.getName().getString());
 
     // Open RecipeDisplay screen
     MinecraftClient.getInstance().setScreen(new RecipeDisplay(item, this.parent));

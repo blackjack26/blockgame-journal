@@ -103,7 +103,7 @@ public class RecipeJournalScreen extends Screen {
       this.setInitialFocus(this.search);
     }
 
-    this.updateItems();
+    this.updateItems(this.search.getText());
 
     // Add warning if no journal
     if (Journal.INSTANCE == null) {
@@ -129,7 +129,13 @@ public class RecipeJournalScreen extends Screen {
     context.drawGuiTexture(BACKGROUND_SPRITE, this.left, this.top, MENU_WIDTH, MENU_HEIGHT);
   }
 
-  private void updateItems() {
+  @Override
+  public void close() {
+    RecipeJournalScreen.lastSearch = null; // Clear search
+    super.close();
+  }
+
+  private void updateItems(String filter) {
     if (Journal.INSTANCE == null) {
       return;
     }
@@ -140,7 +146,7 @@ public class RecipeJournalScreen extends Screen {
         .filter(Objects::nonNull)
         .sorted(Comparator.comparing(a -> a.getName().getString().toLowerCase(Locale.ROOT)))
         .toList();
-    filter(null);
+    filter(filter);
   }
 
   private void filter(@Nullable String filter) {
