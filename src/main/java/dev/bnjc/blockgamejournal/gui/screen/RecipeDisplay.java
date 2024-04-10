@@ -1,6 +1,8 @@
 package dev.bnjc.blockgamejournal.gui.screen;
 
+import dev.bnjc.blockgamejournal.BlockgameJournal;
 import dev.bnjc.blockgamejournal.gui.widget.RecipeWidget;
+import dev.bnjc.blockgamejournal.journal.DecomposedJournalEntry;
 import dev.bnjc.blockgamejournal.journal.Journal;
 import dev.bnjc.blockgamejournal.journal.JournalEntry;
 import dev.bnjc.blockgamejournal.journal.JournalEntryBuilder;
@@ -26,8 +28,9 @@ public class RecipeDisplay extends Screen {
   private static final int MENU_WIDTH = 192;
   private static final int MENU_HEIGHT = 156;
 
+  private final String key;
   private final Screen parent;
-  private final List<JournalEntry> entries;
+  private List<JournalEntry> entries;
 
   private int left = 0;
   private int top = 0;
@@ -36,10 +39,12 @@ public class RecipeDisplay extends Screen {
   private TexturedButtonWidget prevPageButton;
   private TexturedButtonWidget nextPageButton;
   private RecipeWidget recipeWidget;
+  private TexturedButtonWidget decomposeButton;
 
   public RecipeDisplay(String key, Screen parent) {
     super(Text.empty());
 
+    this.key = key;
     this.parent = parent;
     if (Journal.INSTANCE == null) {
       this.entries = Collections.emptyList();
@@ -98,7 +103,7 @@ public class RecipeDisplay extends Screen {
         this.left + 8,
         this.top + 10,
         MENU_WIDTH - 16,
-        MENU_HEIGHT - 24
+        MENU_HEIGHT - 28
     );
     this.addDrawableChild(this.recipeWidget);
     this.recipeWidget.setEntry(this.entries.get(this.page));
@@ -116,6 +121,52 @@ public class RecipeDisplay extends Screen {
       prevRecipeButton.setTooltip(Tooltip.of(Text.translatable("blockgamejournal.prev_recipe")));
       this.addDrawableChild(prevRecipeButton);
     }
+
+    // Remove the recipe from the journal (Bottom left)
+    TexturedButtonWidget removeButton = new TexturedButtonWidget(
+        this.left + 5,
+        this.top + MENU_HEIGHT - (3 + BUTTON_SIZE),
+        12,
+        12,
+        new ButtonTextures(GuiUtil.sprite("widgets/remove/button"), GuiUtil.sprite("widgets/remove/button_highlighted")),
+        button -> {
+          if (Journal.INSTANCE == null) {
+            return;
+          }
+
+          Journal.INSTANCE.removeEntry(this.key, this.page);
+          this.entries = Journal.INSTANCE.getEntries().get(this.key);
+          if (this.entries == null) {
+            this.close();
+            return;
+          }
+
+          this.goToPage(Math.min(this.page, this.entries.size() - 1));
+        }
+    );
+    removeButton.setTooltip(Tooltip.of(Text.translatable("blockgamejournal.remove_recipe")));
+    this.addDrawableChild(removeButton);
+
+    // Decompose the recipe (next to close button)
+    this.decomposeButton = new TexturedButtonWidget(
+        this.left + MENU_WIDTH - 2 * (3 + BUTTON_SIZE),
+        this.top + 5,
+        12,
+        12,
+        new ButtonTextures(GuiUtil.sprite("widgets/decompose/button"), GuiUtil.sprite("widgets/decompose/button_highlighted")),
+        button -> {
+          if (Journal.INSTANCE == null) {
+            return;
+          }
+
+          DecomposedJournalEntry decomposed = this.entries.get(this.page).decompose();
+          BlockgameJournal.LOGGER.info(decomposed.toString());
+        }
+    );
+    this.decomposeButton.setTooltip(Tooltip.of(Text.translatable("blockgamejournal.decompose_recipe")));
+    this.addDrawableChild(this.decomposeButton);
+
+    this.goToPage(0);
   }
 
   @Override
@@ -146,6 +197,22 @@ public class RecipeDisplay extends Screen {
 
     this.nextPageButton.visible = this.page < this.entries.size() - 1;
     this.prevPageButton.visible = this.page > 0;
+    this.decomposeButton.visible = this.hasDecomposableIngredients();
     this.recipeWidget.setEntry(this.entries.get(this.page));
+  }
+
+  private boolean hasDecomposableIngredients() {
+    if (Journal.INSTANCE == null) {
+      return false;
+    }
+
+    JournalEntry entry = this.entries.get(this.page);
+    for (String ingredient : entry.getIngredients().keySet()) {
+      if (Journal.INSTANCE.hasJournalEntry(ingredient)) {
+        return true;
+      }
+    }
+
+    return false;
   }
 }

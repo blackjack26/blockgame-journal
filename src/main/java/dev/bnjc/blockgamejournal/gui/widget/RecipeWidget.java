@@ -211,7 +211,7 @@ public class RecipeWidget extends ClickableWidget {
     int titleX = this.getX() + this.getWidth() / 2 - this.textRenderer.getWidth(npcText) / 2;
     context.drawText(this.textRenderer, npcText, titleX, this.lastY + 2, 0x404040, false);
 
-    this.lastY += 20;
+    this.lastY += 16;
   }
 
   private void renderEntries(DrawContext context) {
@@ -309,9 +309,15 @@ public class RecipeWidget extends ClickableWidget {
 
       // Render text
       int requiredCount = this.requiredItems(item);
+      boolean hasEntry = Journal.INSTANCE != null && Journal.INSTANCE.hasJournalEntry(itemKey);
 
       MutableText text = Text.literal(requiredCount > 0 ? "✖ " : "✔ ").formatted(requiredCount > 0 ? Formatting.DARK_RED : Formatting.DARK_GREEN);
-      text.append(Text.literal(JournalEntryBuilder.getName(item)).formatted(Formatting.DARK_GRAY));
+      MutableText itemText = Text.literal(JournalEntryBuilder.getName(item)).formatted(Formatting.DARK_GRAY);
+      if (hasEntry) {
+        itemText.formatted(Formatting.UNDERLINE);
+      }
+      text.append(itemText);
+
       if (item.getCount() > 1) {
         text.append(Text.literal(" x" + item.getCount()).formatted(Formatting.DARK_GRAY));
       }
@@ -321,11 +327,10 @@ public class RecipeWidget extends ClickableWidget {
         context.drawText(textRenderer, oText, x + 20, this.lastY + 4, 0x404040, false);
         this.lastY += 10;
       }
+      this.lastY += 6;
 
       int endY = this.lastY;
       this.ingredientPositions.put(itemKey, new Integer[]{startY, endY});
-
-      this.lastY += 6;
     }
   }
 

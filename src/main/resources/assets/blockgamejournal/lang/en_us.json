@@ -1,9 +1,11 @@
 {
   "blockgamejournal.close": "Close",
+  "blockgamejournal.decompose_recipe": "Decompose Recipe",
   "blockgamejournal.next_page": "Next Page",
   "blockgamejournal.prev_page": "Previous Page",
   "blockgamejournal.prev_recipe": "Previous Recipe",
   "blockgamejournal.recipe_journal": "Recipe Journal",
   "blockgamejournal.recipe_journal.no_journal": "Invalid Journal",
+  "blockgamejournal.remove_recipe": "Remove Recipe",
   "blockgamejournal.search_hint": "Search..."
 }

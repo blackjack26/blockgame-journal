@@ -121,4 +121,23 @@ public class Journal {
   public boolean hasJournalEntry(String key) {
     return entries.containsKey(key);
   }
+
+  public boolean removeEntry(String key, int index) {
+    if (!entries.containsKey(key)) {
+      return false;
+    }
+
+    List<JournalEntry> recipeEntries = entries.get(key);
+    if (index < 0 || index >= recipeEntries.size()) {
+      return false;
+    }
+
+    recipeEntries.remove(index);
+    if (recipeEntries.isEmpty()) {
+      entries.remove(key);
+    } else {
+      entries.put(key, new ArrayList<>(recipeEntries));
+    }
+    return true;
+  }
 }

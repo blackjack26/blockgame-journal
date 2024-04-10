@@ -66,8 +66,7 @@ public final class JournalEntry {
 
   private ItemStack knownItem;
 
-  public JournalEntry(
-      String key, Map<String, Integer> ingredients, String npcName, Long storedAt) {
+  public JournalEntry(String key, Map<String, Integer> ingredients, String npcName, Long storedAt) {
     this.key = key;
     this.ingredients = ingredients;
     this.npcName = npcName;
@@ -106,5 +105,9 @@ public final class JournalEntry {
     }
 
     return items;
+  }
+
+  public DecomposedJournalEntry decompose() {
+    return DecomposedJournalEntry.decompose(this);
   }
 }
