@@ -1,6 +1,5 @@
 package dev.bnjc.blockgamejournal.gui.screen;
 
-import com.mojang.authlib.GameProfile;
 import dev.bnjc.blockgamejournal.BlockgameJournal;
 import dev.bnjc.blockgamejournal.gui.widget.ItemListWidget;
 import dev.bnjc.blockgamejournal.gui.widget.ModeButton;
@@ -9,16 +8,17 @@ import dev.bnjc.blockgamejournal.gui.widget.VerticalScrollWidget;
 import dev.bnjc.blockgamejournal.journal.Journal;
 import dev.bnjc.blockgamejournal.journal.JournalMode;
 import dev.bnjc.blockgamejournal.util.GuiUtil;
+import dev.bnjc.blockgamejournal.util.ItemUtil;
 import dev.bnjc.blockgamejournal.util.SearchUtil;
+import lombok.Getter;
+import lombok.Setter;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.screen.Screen;
 import net.minecraft.client.gui.tooltip.Tooltip;
+import net.minecraft.client.gui.widget.ButtonWidget;
 import net.minecraft.client.gui.widget.TextFieldWidget;
 import net.minecraft.client.resource.language.I18n;
 import net.minecraft.item.ItemStack;
-import net.minecraft.item.PlayerHeadItem;
-import net.minecraft.nbt.NbtCompound;
-import net.minecraft.nbt.NbtHelper;
 import net.minecraft.text.Text;
 import net.minecraft.util.Identifier;
 import org.jetbrains.annotations.Nullable;
@@ -32,6 +32,7 @@ public class JournalScreen extends Screen {
   private static final Logger LOGGER = BlockgameJournal.getLogger("Recipe Journal");
   private static final Identifier BACKGROUND_SPRITE = GuiUtil.sprite("background");
 
+  private static final int BUTTON_SIZE = 14;
   private static final int GRID_COLUMNS = 9;
   private static final int GRID_ROWS = 6;
   private static final int GRID_LEFT = 7;
@@ -53,10 +54,13 @@ public class JournalScreen extends Screen {
 
   private JournalMode.Type currentMode = JournalMode.Type.ITEM_SEARCH;
 
+  private @Nullable String selectedNpc = null;
+
   private final Screen parent;
   private TextFieldWidget search;
   private ItemListWidget itemList;
   private VerticalScrollWidget scroll;
+  private ButtonWidget closeButton;
 
   private List<ItemStack> items = Collections.emptyList();
 
@@ -124,6 +128,15 @@ public class JournalScreen extends Screen {
        this.search.setUneditableColor(0xFF4040);
     }
 
+    // Close button
+    this.closeButton = GuiUtil.close(
+        this.left + MENU_WIDTH - (3 + BUTTON_SIZE),
+        this.top + 5,
+        button -> this.setSelectedNpc(null)
+    );
+    this.closeButton.visible = false;
+    this.addDrawableChild(this.closeButton);
+
     ///// Mode Buttons
     Map<JournalMode.Type, ModeButton> buttons = new HashMap<>();
 
@@ -189,10 +202,18 @@ public class JournalScreen extends Screen {
     super.close();
   }
 
+  public void setSelectedNpc(String npc) {
+    this.selectedNpc = npc;
+    this.updateItems(null);
+    this.closeButton.visible = npc != null;
+  }
+
   private void updateItems(String filter) {
     if (Journal.INSTANCE == null) {
       return;
     }
+
+    this.itemList.setMode(this.currentMode);
 
     if (this.currentMode == JournalMode.Type.ITEM_SEARCH) {
       // Filter journal entry items
@@ -204,13 +225,25 @@ public class JournalScreen extends Screen {
           .toList();
     }
     else if (this.currentMode == JournalMode.Type.NPC_SEARCH) {
-      // Filter known NPCs
-      this.items = Journal.INSTANCE.getKnownNPCs().keySet()
-          .stream()
-          .map(Journal.INSTANCE::getKnownNpcItem)
-          .filter(Objects::nonNull)
-          .sorted(Comparator.comparing(a -> a.getName().getString().toLowerCase(Locale.ROOT)))
-          .toList();
+      // If filter matches "npc:Some Name", filter by recipes that have that NPC
+      if (this.selectedNpc != null) {
+        this.items = Journal.INSTANCE.getEntries().entrySet().stream()
+            .filter(entry -> entry.getValue().stream().anyMatch(e -> e.getNpcName().toLowerCase(Locale.ROOT).equals(this.selectedNpc.toLowerCase(Locale.ROOT))))
+            .map(entry -> Journal.INSTANCE.getKnownItem(entry.getKey()))
+            .filter(Objects::nonNull)
+            .sorted(Comparator.comparing(a -> a.getName().getString().toLowerCase(Locale.ROOT)))
+            .toList();
+      }
+      // Otherwise, show all known NPCs
+      else {
+        this.items = Journal.INSTANCE.getKnownNPCs().keySet()
+            .stream()
+            .map(Journal.INSTANCE::getKnownNpcItem)
+            .filter(Objects::nonNull)
+            .sorted(Comparator.comparing(a -> a.getName().getString().toLowerCase(Locale.ROOT)))
+            .toList();
+      }
+
     }
     else {
       this.items = Collections.emptyList();

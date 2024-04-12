@@ -36,6 +36,7 @@ import java.util.function.Function;
 public class Journal {
   private static final Logger LOGGER = BlockgameJournal.getLogger(Journal.class.getCanonicalName());
 
+  public static final String NPC_NAME_KEY = "BGJ_NPC";
   public static final Codec<Map<String, ArrayList<JournalEntry>>> JOURNAL_CODEC = Codec
       .unboundedMap(Codec.STRING, Codec.list(JournalEntry.CODEC).xmap(ArrayList::new, Function.identity()))
       .xmap(HashMap::new, Function.identity());
@@ -170,6 +171,8 @@ public class Journal {
       loreNbt.add(NbtString.of(Text.Serializer.toJson(loreText)));
       stack.getOrCreateSubNbt(ItemStack.DISPLAY_KEY).put(ItemStack.LORE_KEY, loreNbt);
     }
+
+    stack.setSubNbt(NPC_NAME_KEY, NbtString.of(npcName));
 
     return stack;
   }

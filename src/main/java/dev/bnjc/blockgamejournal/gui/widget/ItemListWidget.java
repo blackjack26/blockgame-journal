@@ -1,6 +1,9 @@
 package dev.bnjc.blockgamejournal.gui.widget;
 
+import dev.bnjc.blockgamejournal.gui.screen.JournalScreen;
 import dev.bnjc.blockgamejournal.gui.screen.RecipeDisplay;
+import dev.bnjc.blockgamejournal.journal.Journal;
+import dev.bnjc.blockgamejournal.journal.JournalMode;
 import dev.bnjc.blockgamejournal.util.GuiUtil;
 import lombok.Setter;
 import net.minecraft.client.MinecraftClient;
@@ -26,6 +29,9 @@ public class ItemListWidget extends ClickableWidget {
   private final int gridHeight;
   private List<ItemStack> items = Collections.emptyList();
   private int offset = 0;
+
+  @Setter
+  private JournalMode.Type mode = JournalMode.Type.ITEM_SEARCH;
 
   @Setter
   private boolean hideTooltip;
@@ -71,8 +77,17 @@ public class ItemListWidget extends ClickableWidget {
 
     ItemStack item = items.get(index);
 
-    // Open RecipeDisplay screen
-    MinecraftClient.getInstance().setScreen(new RecipeDisplay(item, this.parent));
+    if (this.mode == JournalMode.Type.ITEM_SEARCH) {
+      // Open RecipeDisplay screen
+      MinecraftClient.getInstance().setScreen(new RecipeDisplay(item, this.parent));
+    }
+    else if (this.mode == JournalMode.Type.NPC_SEARCH) {
+      if (this.parent instanceof JournalScreen journalScreen) {
+        if (item.hasNbt()) {
+          journalScreen.setSelectedNpc(item.getNbt().getString(Journal.NPC_NAME_KEY));
+        }
+      }
+    }
   }
 
   @Override
