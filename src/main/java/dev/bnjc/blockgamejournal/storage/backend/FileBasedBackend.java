@@ -28,6 +28,7 @@ public abstract class FileBasedBackend implements Backend {
 
   public static final String JOURNAL_NAME = "journal";
   public static final String KNOWN_ITEMS_NAME = "item_cache";
+  public static final String NPC_CACHE_NAME = "npc_cache";
 
   @Override
   public void delete() {

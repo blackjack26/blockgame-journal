@@ -1,16 +1,18 @@
 package dev.bnjc.blockgamejournal.storage.backend;
 
+import com.mojang.authlib.GameProfile;
 import dev.bnjc.blockgamejournal.BlockgameJournal;
 import dev.bnjc.blockgamejournal.journal.Journal;
+import dev.bnjc.blockgamejournal.journal.JournalEntry;
 import dev.bnjc.blockgamejournal.journal.metadata.Metadata;
 import dev.bnjc.blockgamejournal.util.FileUtil;
 import dev.bnjc.blockgamejournal.util.Timer;
+import net.minecraft.item.ItemStack;
 import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
 
 import java.nio.file.Path;
-import java.util.HashMap;
-import java.util.Optional;
+import java.util.*;
 
 public class NbtBackend extends FileBasedBackend {
   private static final Logger LOGGER = BlockgameJournal.getLogger("NBT");
@@ -22,25 +24,12 @@ public class NbtBackend extends FileBasedBackend {
       return null;
     }
 
-    // Load journal entries if they exist
-    Path journalPath = STORAGE_DIR.resolve(JOURNAL_NAME + extension());
-    var result = Timer.time(() -> FileUtil.loadFromNbt(Journal.JOURNAL_CODEC, journalPath));
-    if (result.getFirst().isPresent()) {
-      LOGGER.info("[Blockgame Journal] Loaded {} in {}ns", journalPath, result.getSecond());
+    var metadata = meta.get();
+    var entries = this.loadJournalEntries();
+    var items = this.loadKnownItems();
+    var npcs = this.loadKnownNPCs();
 
-      // Load cached items if they exist
-      Path itemsPath = STORAGE_DIR.resolve(KNOWN_ITEMS_NAME + extension());
-      var itemsResult = Timer.time(() -> FileUtil.loadFromNbt(Journal.KNOWN_ITEMS_CODEC, itemsPath));
-      if (itemsResult.getFirst().isPresent()) {
-        LOGGER.info("[Blockgame Journal] Loaded {} in {}ns", itemsPath, itemsResult.getSecond());
-        return new Journal(meta.get(), result.getFirst().get(), itemsResult.getFirst().get());
-      }
-
-      LOGGER.warn("[Blockgame Journal] Failed to load cached items from {}", itemsPath);
-      return new Journal(meta.get(), result.getFirst().get(), new HashMap<>());
-    }
-
-    return new Journal(meta.get(), new HashMap<>(), new HashMap<>());
+    return new Journal(metadata, entries, items, npcs);
   }
 
   @Override
@@ -55,11 +44,50 @@ public class NbtBackend extends FileBasedBackend {
 
     boolean result = FileUtil.saveToNbt(journal.getEntries(), Journal.JOURNAL_CODEC, STORAGE_DIR.resolve(JOURNAL_NAME + extension()));
     result &= FileUtil.saveToNbt(journal.getKnownItems(), Journal.KNOWN_ITEMS_CODEC, STORAGE_DIR.resolve(KNOWN_ITEMS_NAME + extension()));
+    result &= FileUtil.saveToNbt(journal.getKnownNPCs(), Journal.KNOWN_NPCS_CODEC, STORAGE_DIR.resolve(NPC_CACHE_NAME + extension()));
     return result;
   }
 
   @Override
   public String extension() {
     return ".nbt";
+  }
+
+  private Map<String, ArrayList<JournalEntry>> loadJournalEntries() {
+    Path journalPath = STORAGE_DIR.resolve(JOURNAL_NAME + extension());
+    var result = Timer.time(() -> FileUtil.loadFromNbt(Journal.JOURNAL_CODEC, journalPath));
+    if (result.getFirst().isPresent()) {
+      LOGGER.info("[Blockgame Journal] Loaded entries {} in {}ns", journalPath, result.getSecond());
+      return result.getFirst().get();
+    }
+
+    LOGGER.warn("[Blockgame Journal] Failed to load journal entries from {}", journalPath);
+    return new HashMap<>();
+  }
+
+  private Map<String, ItemStack> loadKnownItems() {
+    // Load cached items if they exist
+    Path itemsPath = STORAGE_DIR.resolve(KNOWN_ITEMS_NAME + extension());
+    var itemsResult = Timer.time(() -> FileUtil.loadFromNbt(Journal.KNOWN_ITEMS_CODEC, itemsPath));
+    if (itemsResult.getFirst().isPresent()) {
+      LOGGER.info("[Blockgame Journal] Loaded items {} in {}ns", itemsPath, itemsResult.getSecond());
+      return itemsResult.getFirst().get();
+    }
+
+    LOGGER.warn("[Blockgame Journal] Failed to load cached items from {}", itemsPath);
+    return new HashMap<>();
+  }
+
+  private Map<String, GameProfile> loadKnownNPCs() {
+    // Load cached NPCs if they exist
+    Path npcPath = STORAGE_DIR.resolve(NPC_CACHE_NAME + extension());
+    var npcResult = Timer.time(() -> FileUtil.loadFromNbt(Journal.KNOWN_NPCS_CODEC, npcPath));
+    if (npcResult.getFirst().isPresent()) {
+      LOGGER.info("[Blockgame Journal] Loaded NPCs {} in {}ns", npcPath, npcResult.getSecond());
+      return npcResult.getFirst().get();
+    }
+
+    LOGGER.warn("[Blockgame Journal] Failed to load cached NPCs from {}", npcPath);
+    return new HashMap<>();
   }
 }

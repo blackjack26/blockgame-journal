@@ -3,6 +3,10 @@ package dev.bnjc.blockgamejournal.journal;
 import dev.bnjc.blockgamejournal.BlockgameJournal;
 import dev.bnjc.blockgamejournal.util.ItemUtil;
 import lombok.Getter;
+import net.minecraft.client.MinecraftClient;
+import net.minecraft.client.network.ClientPlayerEntity;
+import net.minecraft.entity.Entity;
+import net.minecraft.entity.player.PlayerInventory;
 import net.minecraft.item.ItemStack;
 import net.minecraft.recipe.CraftingRecipe;
 import net.minecraft.recipe.Ingredient;
@@ -74,7 +78,18 @@ public class DecomposedJournalEntry {
     return items;
   }
 
+  private static List<ItemStack> inventory;
   public static DecomposedJournalEntry decompose(JournalEntry entry) {
+    // Populate inventory
+    Entity entity = MinecraftClient.getInstance().getCameraEntity();
+    if (entity instanceof ClientPlayerEntity player) {
+      PlayerInventory inv = player.getInventory();
+      inventory = new ArrayList<>();
+      inventory.addAll(inv.main);
+      inventory.addAll(inv.armor);
+      inventory.addAll(inv.offHand);
+    }
+
     DecomposedJournalEntry decomposed = new DecomposedJournalEntry(entry.getKey(), entry.getCount());
     parseJournalEntry(entry, decomposed, 1);
     return decomposed;
@@ -104,30 +119,32 @@ public class DecomposedJournalEntry {
     }
 
     // Ingredients
-    for (Map.Entry<String, Integer> ingredient : entry.getIngredients().entrySet()) {
-      if (!ItemUtil.isFullyDecomposed(ingredient.getKey())) {
-        List<JournalEntry> entries = Journal.INSTANCE.getEntries().get(ingredient.getKey());
+    for (ItemStack ingredient : entry.getIngredientItems()) {
+      String ingredientKey = ItemUtil.getKey(ingredient);
+
+      if (!ItemUtil.isFullyDecomposed(ingredientKey) && !inInventory(ingredient, quantity)) {
+        List<JournalEntry> entries = Journal.INSTANCE.getEntries().get(ingredientKey);
         if (entries != null && !entries.isEmpty()) {
           // TODO: Handle multiple entries
           JournalEntry nextEntry = entries.get(0);
           if (!ItemUtil.isRecursiveRecipe(nextEntry, entry.getKey())) {
             int nextCount = nextEntry.getCount();
-            int reqCount = ingredient.getValue() * quantity;
+            int reqCount = ingredient.getCount() * quantity;
             parseJournalEntry(nextEntry, decomposed, (int) Math.ceil((double) reqCount / nextCount));
             continue;
           }
         }
 
-        if (ingredient.getKey().startsWith("minecraft:") && BlockgameJournal.getConfig().getGeneralConfig().decomposeVanillaItems) {
-          RecipeEntry<?> recipeEntry = ItemUtil.getRecipe(new Identifier(ingredient.getKey()));
-          parseVanillaRecipe(recipeEntry, ingredient.getKey(), decomposed, ingredient.getValue() * quantity);
+        if (ingredientKey.startsWith("minecraft:") && BlockgameJournal.getConfig().getGeneralConfig().decomposeVanillaItems) {
+          RecipeEntry<?> recipeEntry = ItemUtil.getRecipe(new Identifier(ingredientKey));
+          parseVanillaRecipe(recipeEntry, ingredientKey, decomposed, ingredient.getCount());
           continue;
         }
       }
 
       // If there is no entry for the ingredient, add it to the list
       // If the ingredient is already in the list, add the count
-      decomposed.ingredients.merge(ingredient.getKey(), ingredient.getValue() * quantity, Integer::sum);
+      decomposed.ingredients.merge(ingredientKey, ingredient.getCount() * quantity, Integer::sum);
     }
   }
 
@@ -169,5 +186,20 @@ public class DecomposedJournalEntry {
     }
 
     decomposed.ingredients.merge(key, quantity, Integer::sum);
+  }
+
+  private static boolean inInventory(ItemStack stack, int multiplier) {
+    if (inventory == null || inventory.isEmpty()) {
+      return false;
+    }
+
+    int requiredCount = stack.getCount() * multiplier;
+    for (ItemStack invStack : inventory) {
+      if (ItemUtil.isItemEqual(stack, invStack)) {
+        requiredCount -= invStack.getCount();
+      }
+    }
+
+    return requiredCount <= 0;
   }
 }

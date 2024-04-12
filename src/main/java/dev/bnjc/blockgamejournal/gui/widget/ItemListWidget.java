@@ -1,9 +1,7 @@
 package dev.bnjc.blockgamejournal.gui.widget;
 
-import dev.bnjc.blockgamejournal.BlockgameJournal;
 import dev.bnjc.blockgamejournal.gui.screen.RecipeDisplay;
 import dev.bnjc.blockgamejournal.util.GuiUtil;
-import lombok.Getter;
 import lombok.Setter;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.DrawContext;
@@ -18,7 +16,7 @@ import net.minecraft.util.math.MathHelper;
 import java.util.Collections;
 import java.util.List;
 
-import static dev.bnjc.blockgamejournal.gui.screen.RecipeJournalScreen.GRID_SLOT_SIZE;
+import static dev.bnjc.blockgamejournal.gui.screen.JournalScreen.GRID_SLOT_SIZE;
 
 public class ItemListWidget extends ClickableWidget {
   private static final Identifier BACKGROUND = GuiUtil.sprite("widgets/slot_background");

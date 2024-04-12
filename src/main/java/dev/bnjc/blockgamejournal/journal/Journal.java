@@ -1,8 +1,10 @@
 package dev.bnjc.blockgamejournal.journal;
 
+import com.mojang.authlib.GameProfile;
 import com.mojang.serialization.Codec;
 import dev.bnjc.blockgamejournal.BlockgameJournal;
 import dev.bnjc.blockgamejournal.journal.metadata.Metadata;
+import dev.bnjc.blockgamejournal.journal.npc.NPCNames;
 import dev.bnjc.blockgamejournal.storage.Storage;
 import dev.bnjc.blockgamejournal.storage.backend.FileBasedBackend;
 import dev.bnjc.blockgamejournal.util.ItemUtil;
@@ -10,8 +12,16 @@ import lombok.Getter;
 import lombok.Setter;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.item.ItemStack;
+import net.minecraft.item.Items;
+import net.minecraft.item.PlayerHeadItem;
 import net.minecraft.nbt.NbtCompound;
+import net.minecraft.nbt.NbtHelper;
+import net.minecraft.nbt.NbtList;
+import net.minecraft.nbt.NbtString;
 import net.minecraft.registry.Registries;
+import net.minecraft.text.MutableText;
+import net.minecraft.text.Text;
+import net.minecraft.util.Formatting;
 import net.minecraft.util.Identifier;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -34,6 +44,13 @@ public class Journal {
       .unboundedMap(Codec.STRING, ItemStack.CODEC)
       .xmap(HashMap::new, Function.identity());
 
+  public static final Codec<Map<String, GameProfile>> KNOWN_NPCS_CODEC = Codec
+      .unboundedMap(Codec.STRING, NbtCompound.CODEC.xmap(
+          NbtHelper::toGameProfile,
+          gameProfile -> NbtHelper.writeGameProfile(new NbtCompound(), gameProfile)
+      ))
+      .xmap(HashMap::new, Function.identity());
+
   @Nullable
   public static Journal INSTANCE = null;
 
@@ -43,7 +60,7 @@ public class Journal {
 
   public static void loadOrCreate(@NotNull Metadata creationMetadata) {
     unload();
-    INSTANCE = Storage.load().orElseGet(() -> new Journal(creationMetadata, new HashMap<>(), new HashMap<>()));
+    INSTANCE = Storage.load().orElseGet(() -> new Journal(creationMetadata, new HashMap<>(), new HashMap<>(), new HashMap<>()));
     save();
   }
 
@@ -74,13 +91,22 @@ public class Journal {
   private final Map<String, ItemStack> knownItems;
 
   @Getter
+  private final Map<String, GameProfile> knownNPCs;
+
+  @Getter
   @Setter
   private Metadata metadata;
 
-  public Journal(Metadata metadata, Map<String, ArrayList<JournalEntry>> entries, Map<String, ItemStack> knownItems) {
+  public Journal(
+      Metadata metadata,
+      Map<String, ArrayList<JournalEntry>> entries,
+      Map<String, ItemStack> knownItems,
+      Map<String, GameProfile> knownNPCs
+  ) {
     this.metadata = metadata;
     this.entries = entries;
     this.knownItems = knownItems;
+    this.knownNPCs = knownNPCs;
   }
 
   public void addEntry(ItemStack result, JournalEntry entry) {
@@ -119,6 +145,33 @@ public class Journal {
       return new ItemStack(Registries.ITEM.get(new Identifier(key)));
     }
     return knownItems.get(key);
+  }
+
+  public @Nullable ItemStack getKnownNpcItem(String npcName) {
+    GameProfile gameProfile = knownNPCs.get(npcName);
+    if (gameProfile == null) {
+      return null;
+    }
+
+    ItemStack stack = new ItemStack(Items.PLAYER_HEAD);
+    stack.setSubNbt(PlayerHeadItem.SKULL_OWNER_KEY, NbtHelper.writeGameProfile(new NbtCompound(), gameProfile));
+
+    NPCNames.NPCName npcNameObj = NPCNames.get(npcName);
+    MutableText npcNameText = Text.literal(npcNameObj.name());
+    npcNameText.setStyle(npcNameText.getStyle().withItalic(false).withFormatting(Formatting.WHITE));
+    stack.setCustomName(npcNameText);
+
+    // Set "Lore" to the title of the NPC
+    if (npcNameObj.title() != null) {
+      MutableText loreText = Text.literal("« " + npcNameObj.title() + " »");
+      loreText.setStyle(loreText.getStyle().withItalic(false).withFormatting(Formatting.GRAY));
+
+      NbtList loreNbt = new NbtList();
+      loreNbt.add(NbtString.of(Text.Serializer.toJson(loreText)));
+      stack.getOrCreateSubNbt(ItemStack.DISPLAY_KEY).put(ItemStack.LORE_KEY, loreNbt);
+    }
+
+    return stack;
   }
 
   public boolean hasJournalEntry(ItemStack stack) {

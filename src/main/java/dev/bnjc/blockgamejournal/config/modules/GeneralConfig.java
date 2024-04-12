@@ -9,7 +9,15 @@ public class GeneralConfig implements ConfigData {
   @ConfigEntry.Gui.Tooltip
   public boolean decomposeVanillaItems;
 
+  @ConfigEntry.Gui.Tooltip
+  public boolean highlightMissingRecipes;
+
+  @ConfigEntry.Gui.Tooltip
+  public boolean highlightOutdatedRecipes;
+
   public GeneralConfig() {
     decomposeVanillaItems = false;
+    highlightMissingRecipes = true;
+    highlightOutdatedRecipes = true;
   }
 }

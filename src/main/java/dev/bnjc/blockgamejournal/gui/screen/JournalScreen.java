@@ -1,17 +1,24 @@
 package dev.bnjc.blockgamejournal.gui.screen;
 
+import com.mojang.authlib.GameProfile;
 import dev.bnjc.blockgamejournal.BlockgameJournal;
 import dev.bnjc.blockgamejournal.gui.widget.ItemListWidget;
+import dev.bnjc.blockgamejournal.gui.widget.ModeButton;
 import dev.bnjc.blockgamejournal.gui.widget.SearchWidget;
 import dev.bnjc.blockgamejournal.gui.widget.VerticalScrollWidget;
 import dev.bnjc.blockgamejournal.journal.Journal;
+import dev.bnjc.blockgamejournal.journal.JournalMode;
 import dev.bnjc.blockgamejournal.util.GuiUtil;
 import dev.bnjc.blockgamejournal.util.SearchUtil;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.screen.Screen;
+import net.minecraft.client.gui.tooltip.Tooltip;
 import net.minecraft.client.gui.widget.TextFieldWidget;
 import net.minecraft.client.resource.language.I18n;
 import net.minecraft.item.ItemStack;
+import net.minecraft.item.PlayerHeadItem;
+import net.minecraft.nbt.NbtCompound;
+import net.minecraft.nbt.NbtHelper;
 import net.minecraft.text.Text;
 import net.minecraft.util.Identifier;
 import org.jetbrains.annotations.Nullable;
@@ -19,7 +26,7 @@ import org.slf4j.Logger;
 
 import java.util.*;
 
-public class RecipeJournalScreen extends Screen {
+public class JournalScreen extends Screen {
   public static final int GRID_SLOT_SIZE = 18;
 
   private static final Logger LOGGER = BlockgameJournal.getLogger("Recipe Journal");
@@ -36,10 +43,15 @@ public class RecipeJournalScreen extends Screen {
   private static final int SEARCH_LEFT = 6;
   private static final int SEARCH_TOP = 25;
 
+  private static final int MODE_ICON_OFFSET = 24;
+  private static final int MODE_ICON_SPACING = 24;
+
   private static @Nullable String lastSearch = null;
 
   private int left = 0;
   private int top = 0;
+
+  private JournalMode.Type currentMode = JournalMode.Type.ITEM_SEARCH;
 
   private final Screen parent;
   private TextFieldWidget search;
@@ -48,7 +60,7 @@ public class RecipeJournalScreen extends Screen {
 
   private List<ItemStack> items = Collections.emptyList();
 
-  public RecipeJournalScreen(@Nullable Screen parent) {
+  public JournalScreen(@Nullable Screen parent) {
     super(Text.translatable("blockgamejournal.recipe_journal"));
 
     this.parent = parent;
@@ -97,7 +109,7 @@ public class RecipeJournalScreen extends Screen {
     this.search.setDrawsBackground(false);
     this.search.setChangedListener(this::filter);
     this.search.setEditableColor(0xFFFFFF);
-    this.search.setText(RecipeJournalScreen.lastSearch);
+    this.search.setText(JournalScreen.lastSearch);
 
     if (shouldFocusSearch) {
       this.setInitialFocus(this.search);
@@ -110,6 +122,48 @@ public class RecipeJournalScreen extends Screen {
        this.search.setEditable(false);
        this.search.setText(I18n.translate("blockgamejournal.recipe_journal.no_journal"));
        this.search.setUneditableColor(0xFF4040);
+    }
+
+    ///// Mode Buttons
+    Map<JournalMode.Type, ModeButton> buttons = new HashMap<>();
+
+    var modes = JournalMode.MODES.values().stream()
+        .sorted(Comparator.comparing(JournalMode::order))
+        .toList();
+
+    for (int index = 0; index < modes.size(); index++) {
+      JournalMode mode = modes.get(index);
+      ItemStack stack = new ItemStack(mode.icon());
+
+      if (mode.type() == JournalMode.Type.NPC_SEARCH) {
+        stack = Journal.INSTANCE.getKnownNpcItem("Mayor McCheese");
+      }
+
+      ModeButton modeButton = this.addDrawableChild(new ModeButton(
+          stack,
+          this.left - MODE_ICON_OFFSET,
+          this.top + index * MODE_ICON_SPACING + 1,
+          button -> {
+            // Un-highlight old
+            if (buttons.containsKey(this.currentMode)) {
+              buttons.get(this.currentMode).setHighlighted(false);
+            }
+
+            // Highlight new
+            this.currentMode = mode.type();
+            buttons.get(this.currentMode).setHighlighted(true);
+
+            this.updateItems(null);
+            this.search.setText("");
+          }
+      ));
+      modeButton.setTooltip(Tooltip.of(Text.translatable("blockgamejournal.mode." + mode.type().name())));
+      buttons.put(mode.type(), modeButton);
+    }
+
+    // Mode button highlighting
+    if (buttons.containsKey(this.currentMode)) {
+      buttons.get(this.currentMode).setHighlighted(true);
     }
   }
 
@@ -131,7 +185,7 @@ public class RecipeJournalScreen extends Screen {
 
   @Override
   public void close() {
-    RecipeJournalScreen.lastSearch = null; // Clear search
+    JournalScreen.lastSearch = null; // Clear search
     super.close();
   }
 
@@ -140,17 +194,32 @@ public class RecipeJournalScreen extends Screen {
       return;
     }
 
-    this.items = Journal.INSTANCE.getEntries().keySet()
-        .stream()
-        .map(Journal.INSTANCE::getKnownItem)
-        .filter(Objects::nonNull)
-        .sorted(Comparator.comparing(a -> a.getName().getString().toLowerCase(Locale.ROOT)))
-        .toList();
+    if (this.currentMode == JournalMode.Type.ITEM_SEARCH) {
+      // Filter journal entry items
+      this.items = Journal.INSTANCE.getEntries().keySet()
+          .stream()
+          .map(Journal.INSTANCE::getKnownItem)
+          .filter(Objects::nonNull)
+          .sorted(Comparator.comparing(a -> a.getName().getString().toLowerCase(Locale.ROOT)))
+          .toList();
+    }
+    else if (this.currentMode == JournalMode.Type.NPC_SEARCH) {
+      // Filter known NPCs
+      this.items = Journal.INSTANCE.getKnownNPCs().keySet()
+          .stream()
+          .map(Journal.INSTANCE::getKnownNpcItem)
+          .filter(Objects::nonNull)
+          .sorted(Comparator.comparing(a -> a.getName().getString().toLowerCase(Locale.ROOT)))
+          .toList();
+    }
+    else {
+      this.items = Collections.emptyList();
+    }
     filter(filter);
   }
 
   private void filter(@Nullable String filter) {
-    RecipeJournalScreen.lastSearch = filter;
+    JournalScreen.lastSearch = filter;
 
     List<ItemStack> filtered;
     if (filter == null || filter.isEmpty()) {

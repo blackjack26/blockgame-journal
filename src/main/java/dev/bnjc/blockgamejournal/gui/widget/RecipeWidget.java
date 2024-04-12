@@ -246,6 +246,8 @@ public class RecipeWidget extends ClickableWidget {
     int x = this.getX();
     context.drawItem(new ItemStack(Items.GOLD_NUGGET), x, this.lastY);
 
+    int iconX = x + 20;
+    int iconY = this.lastY + 4;
     MutableText text = Text.empty();
     if (Journal.INSTANCE == null || Journal.INSTANCE.getMetadata().getPlayerBalance() == -1f) {
       text.append(Text.literal("?").formatted(Formatting.DARK_PURPLE, Formatting.BOLD));
@@ -254,8 +256,10 @@ public class RecipeWidget extends ClickableWidget {
     } else {
       text.append(Text.literal("✖").formatted(Formatting.DARK_RED));
     }
-    text.append(Text.literal(" " + entry.getCost() + " Coin").formatted(Formatting.DARK_GRAY));
-    context.drawText(textRenderer, text, x + 20, this.lastY + 4, 0x404040, false);
+    context.drawText(textRenderer, text, iconX, iconY, 0x404040, false);
+
+    MutableText coinText = Text.literal(entry.getCost() + " Coin").formatted(Formatting.DARK_GRAY);
+    context.drawText(textRenderer, coinText, iconX + 12, iconY, 0x404040, false);
 
     this.lastY += 16;
   }

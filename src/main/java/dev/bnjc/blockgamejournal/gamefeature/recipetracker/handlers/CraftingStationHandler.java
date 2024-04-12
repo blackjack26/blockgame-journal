@@ -29,6 +29,7 @@ import org.slf4j.Logger;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Optional;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -74,6 +75,10 @@ public class CraftingStationHandler {
 
       if (this.gameFeature.getLastAttackedPlayer() != null) {
         this.npcName = this.gameFeature.getLastAttackedPlayer().getEntityName();
+
+        if (Journal.INSTANCE != null) {
+          Journal.INSTANCE.getKnownNPCs().put(this.npcName, this.gameFeature.getLastAttackedPlayer().getGameProfile());
+        }
       } else {
         this.npcName = matcher.group(1);
       }
@@ -132,6 +137,12 @@ public class CraftingStationHandler {
       return;
     }
 
+    boolean highlightMissing = BlockgameJournal.getConfig().getGeneralConfig().highlightMissingRecipes;
+    boolean highlightOutdated = BlockgameJournal.getConfig().getGeneralConfig().highlightOutdatedRecipes;
+    if (!highlightMissing && !highlightOutdated) {
+      return;
+    }
+
     // Check if slot is within bounds (0-53)
     if (slot.id < 0 || slot.id >= this.inventory.size() || slot.id >= 54) {
       return;
@@ -156,16 +167,24 @@ public class CraftingStationHandler {
 
       // If the item is in the journal, don't highlight it
       if (this.npcName.equals(expectedNpcName) && slot.id == expectedSlot) {
+        if (highlightOutdated) {
+          Optional<Integer> slotRevId = ItemUtil.getRevisionId(slotItem);
+          if (slotRevId.isPresent() && slotRevId.get() != entry.getRevisionId()) {
+            this.highlightSlot(context, slot, 0x30CCCC00);
+          }
+        }
         return;
       }
     }
 
     // If the item is not in the journal, highlight it
-    this.highlightMissingSlot(context, slot);
+    if (highlightMissing) {
+      this.highlightSlot(context, slot, 0x30FF0000);
+    }
   }
 
-  private void highlightMissingSlot(DrawContext context, Slot slot) {
-    context.fill(slot.x, slot.y, slot.x + 16, slot.y + 16, 0x30FF0000);
+  private void highlightSlot(DrawContext context, Slot slot, int color) {
+    context.fill(slot.x, slot.y, slot.x + 16, slot.y + 16, color);
   }
 
   /**

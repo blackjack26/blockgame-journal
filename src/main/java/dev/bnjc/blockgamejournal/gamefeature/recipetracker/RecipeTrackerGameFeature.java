@@ -7,7 +7,7 @@ import dev.bnjc.blockgamejournal.gamefeature.GameFeature;
 import dev.bnjc.blockgamejournal.gamefeature.recipetracker.handlers.CraftingStationHandler;
 import dev.bnjc.blockgamejournal.gamefeature.recipetracker.handlers.ProfileHandler;
 import dev.bnjc.blockgamejournal.gamefeature.recipetracker.handlers.RecipePreviewHandler;
-import dev.bnjc.blockgamejournal.gui.screen.RecipeJournalScreen;
+import dev.bnjc.blockgamejournal.gui.screen.JournalScreen;
 import dev.bnjc.blockgamejournal.journal.Journal;
 import dev.bnjc.blockgamejournal.listener.chat.ReceiveChatListener;
 import dev.bnjc.blockgamejournal.listener.interaction.EntityAttackedListener;
@@ -110,7 +110,7 @@ public class RecipeTrackerGameFeature extends GameFeature {
   }
 
   private void openScreen(MinecraftClient client, @Nullable Screen parent) {
-    client.setScreen(new RecipeJournalScreen(parent));
+    client.setScreen(new JournalScreen(parent));
   }
 
   // region Handlers

@@ -10,7 +10,8 @@
   "contact": {
     "repo": "https://github.com/blackjack26/blockgame-journal",
     "sources": "https://github.com/blackjack26/blockgame-journal",
-    "issues": "https://github.com/blackjack26/blockgame-journal/issues"
+    "issues": "https://github.com/blackjack26/blockgame-journal/issues",
+    "homepage": "https://modrinth.com/mod/blockgame-journal"
   },
   "license": "MIT",
   "icon": "assets/blockgamejournal/icon.png",

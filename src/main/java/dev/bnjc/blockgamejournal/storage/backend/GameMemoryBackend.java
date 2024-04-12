@@ -41,7 +41,7 @@ public class GameMemoryBackend implements Backend {
   @Override
   public boolean saveMetadata(Metadata metadata) {
     if (journal == null) {
-      this.journal = new Journal(metadata, new HashMap<>(), new HashMap<>());
+      this.journal = new Journal(metadata, new HashMap<>(), new HashMap<>(), new HashMap<>());
     } else {
       this.journal.setMetadata(metadata);
     }
