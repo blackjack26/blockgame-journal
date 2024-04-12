@@ -10,18 +10,24 @@ import net.minecraft.registry.Registries;
 import net.minecraft.util.Identifier;
 import org.jetbrains.annotations.Nullable;
 
+import java.util.Optional;
 import java.util.Set;
 
 public class ItemUtil {
   /**
-   * Recipes that are ignored when decomposing items.
+   * Items that have recipes but should be ignored when decomposing items.
    */
-  public static final Set<String> IGNORE_RECIPES = Set.of(
+  private static final Set<String> BASE_ITEMS = Set.of(
       "minecraft:coal",
       "minecraft:copper_ingot",
       "minecraft:lapis_lazuli",
       "minecraft:redstone",
-      "mmoitems:ESSENCE_CORRUPTED"
+      "mmoitems:ESSENCE_CORRUPTED",
+      "mmoitems:ESSENCE_LIFE",
+      "mmoitems:ESSENCE_WATER",
+      "mmoitems:ESSENCE_WIND",
+      "mmoitems:ESSENCE_FIRE",
+      "mmoitems:ESSENCE_EARTH"
   );
 
   public static String getKey(ItemStack itemStack) {
@@ -57,6 +63,16 @@ public class ItemUtil {
     return name;
   }
 
+  public static Optional<Integer> getRevisionId(ItemStack itemStack) {
+    // Try to parse "MMOITEMS_REVISION_ID" tag from the item stack
+    NbtCompound stackNbt = itemStack.getNbt();
+    if (stackNbt != null && stackNbt.contains("MMOITEMS_REVISION_ID")) {
+      return Optional.of(stackNbt.getInt("MMOITEMS_REVISION_ID"));
+    }
+
+    return Optional.empty();
+  }
+
   public static boolean isItemEqual(ItemStack a, ItemStack b) {
     String aKey = ItemUtil.getKey(a);
     String bKey = ItemUtil.getKey(b);
@@ -79,6 +95,14 @@ public class ItemUtil {
   public static ItemStack getOutput(Recipe<?> recipe) {
     MinecraftClient client = MinecraftClient.getInstance();
     return recipe.getResult(client.world.getRegistryManager());
+  }
+
+  /**
+   * @return True if the given item key should be considered fully decomposed. These items may have a known
+   *  recipe, but it shouldn't be used during decomposition.
+   */
+  public static boolean isFullyDecomposed(String key) {
+    return BASE_ITEMS.contains(key);
   }
 
   public static boolean isRecursiveRecipe(JournalEntry entry, String key) {

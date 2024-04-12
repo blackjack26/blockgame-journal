@@ -105,7 +105,7 @@ public class DecomposedJournalEntry {
 
     // Ingredients
     for (Map.Entry<String, Integer> ingredient : entry.getIngredients().entrySet()) {
-      if (!ItemUtil.IGNORE_RECIPES.contains(ingredient.getKey())) {
+      if (!ItemUtil.isFullyDecomposed(ingredient.getKey())) {
         List<JournalEntry> entries = Journal.INSTANCE.getEntries().get(ingredient.getKey());
         if (entries != null && !entries.isEmpty()) {
           // TODO: Handle multiple entries

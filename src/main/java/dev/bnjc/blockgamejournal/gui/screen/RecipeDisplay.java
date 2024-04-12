@@ -211,7 +211,7 @@ public class RecipeDisplay extends Screen {
 
     JournalEntry entry = this.entries.get(this.page);
     for (String ingredient : entry.getIngredients().keySet()) {
-      if (ItemUtil.IGNORE_RECIPES.contains(ingredient)) {
+      if (ItemUtil.isFullyDecomposed(ingredient)) {
         continue;
       }
 
@@ -221,7 +221,7 @@ public class RecipeDisplay extends Screen {
           return true;
         }
       }
-      else if (ingredient.startsWith("minecraft:") && !ItemUtil.IGNORE_RECIPES.contains(ingredient) && BlockgameJournal.getConfig().getGeneralConfig().decomposeVanillaItems) {
+      else if (ingredient.startsWith("minecraft:") && !ItemUtil.isFullyDecomposed(ingredient) && BlockgameJournal.getConfig().getGeneralConfig().decomposeVanillaItems) {
         Identifier id = new Identifier(ingredient);
         RecipeEntry<?> recipeEntry = ItemUtil.getRecipe(id);
         if (recipeEntry != null && !ItemUtil.isRecursiveRecipe(recipeEntry, entry.getKey())) {

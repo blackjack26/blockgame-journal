@@ -2,6 +2,7 @@ package dev.bnjc.blockgamejournal.journal;
 
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
+import dev.bnjc.blockgamejournal.util.ItemUtil;
 import lombok.Getter;
 import lombok.Setter;
 import net.minecraft.item.ItemStack;
@@ -19,6 +20,7 @@ public final class JournalEntry {
           instance.group(
               Codec.STRING.fieldOf("key").forGetter(JournalEntry::getKey),
               Codec.INT.fieldOf("count").forGetter(JournalEntry::getCount),
+              Codec.INT.fieldOf("revisionId").forGetter(JournalEntry::getRevisionId),
               Codec.unboundedMap(Codec.STRING, Codec.INT).fieldOf("ingredients").forGetter(JournalEntry::getIngredients),
               Codec.STRING.fieldOf("npcName").forGetter(JournalEntry::getNpcName),
               Codec.LONG.fieldOf("storedAt").forGetter(JournalEntry::getStoredAt),
@@ -26,8 +28,8 @@ public final class JournalEntry {
               Codec.FLOAT.orElse(-1.0f).fieldOf("cost").forGetter(JournalEntry::getCost),
               Codec.STRING.orElse("").fieldOf("requiredClass").forGetter(JournalEntry::getRequiredClass),
               Codec.INT.orElse(-1).fieldOf("requiredLevel").forGetter(JournalEntry::getRequiredLevel)
-          ).apply(instance, (key, count, ingredients, npcName, storedAt, recipeKnown, cost, requiredClass, requiredLevel) -> {
-            JournalEntry entry = new JournalEntry(key, count, ingredients,  npcName, storedAt);
+          ).apply(instance, (key, count, revisionId, ingredients, npcName, storedAt, recipeKnown, cost, requiredClass, requiredLevel) -> {
+            JournalEntry entry = new JournalEntry(key, count, revisionId, ingredients,  npcName, storedAt);
             entry.setRecipeKnown(recipeKnown);
             entry.setCost(cost);
             entry.setRequiredClass(requiredClass);
@@ -36,43 +38,72 @@ public final class JournalEntry {
           })
   );
 
+  /**
+   * The item identifier. e.g. <code>"mmoitems:ESSENCE_CORRUPTED"</code>
+   */
   private final String key;
+
+  /**
+   * The item stack count of the item represented by the {@link #key}.
+   */
   private final int count;
+  /**
+   * The revision identifier of the item. This is used to determine if the item has been updated after it was stored
+   * in the journal.
+   */
+  private final int revisionId;
+
+  /**
+   * The ingredients required to craft the item. The key is the item identifier and the value is the amount of the item.
+   */
   private final Map<String, Integer> ingredients;
+
+  /**
+   * The name of the NPC that the item can be crafted at.
+   */
   private final String npcName;
+
+  /**
+   * The timestamp when the item was stored in the journal.
+   */
   private final Long storedAt;
 
   // Conditions
   /**
-   * -1: Not applicable, 0: Not known, 1: Known
-   * e.g. "✖ Recipe Known"
+   * Whether the recipe is known or not. The value is one of the following:
+   * -1=Not applicable, 0=Not known, 1=Known
    */
   @Setter
   private byte recipeKnown;
 
   /**
-   * e.g. "✔ Requires 250.0 Coin"
+   * The cost to craft the item.
    */
   @Setter
   private float cost;
 
   /**
-   * e.g. "✔ Requires 10 in Runecarving"
+   * The required class to craft the item. e.g. "Runecarving"
    */
   @Setter
   private String requiredClass;
 
   /**
-   * e.g. "✔ Requires 10 in Runecarving"
+   * The required level of {@link #requiredClass} to craft the item.
    */
   @Setter
   private int requiredLevel;
 
   private ItemStack knownItem;
 
-  public JournalEntry(String key, int count, Map<String, Integer> ingredients, String npcName, Long storedAt) {
+  public JournalEntry(ItemStack stack, Map<String, Integer> ingredients, String npcName, Long storedAt) {
+    this(ItemUtil.getKey(stack), stack.getCount(), ItemUtil.getRevisionId(stack).orElse(-1), ingredients, npcName, storedAt);
+  }
+
+  public JournalEntry(String key, int count, int revisionId, Map<String, Integer> ingredients, String npcName, Long storedAt) {
     this.key = key;
     this.count = count;
+    this.revisionId = revisionId;
     this.ingredients = ingredients;
     this.npcName = npcName;
     this.storedAt = storedAt;
@@ -90,6 +121,9 @@ public final class JournalEntry {
 
     if (this.knownItem == null) {
       this.knownItem = Journal.INSTANCE.getKnownItem(this.key);
+      if (this.knownItem != null) {
+        this.knownItem.setCount(this.count);
+      }
     }
 
     return this.knownItem;

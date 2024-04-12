@@ -20,7 +20,7 @@ public class JournalEntryBuilder {
   }
 
   public JournalEntry build(ItemStack stack) {
-    return new JournalEntry(ItemUtil.getKey(stack), stack.getCount(), getIngredients(), npc.getEntityName(), System.currentTimeMillis());
+    return new JournalEntry(stack, getIngredients(), npc.getEntityName(), System.currentTimeMillis());
   }
 
   private Map<String, Integer> getIngredients() {
