@@ -13,14 +13,16 @@ import java.util.Map;
 public class JournalEntryBuilder {
   private final List<ItemStack> ingredientStacks;
   private final PlayerEntity npc;
+  private final int slot;
 
-  public JournalEntryBuilder(List<ItemStack> ingredientStacks, PlayerEntity npc) {
+  public JournalEntryBuilder(List<ItemStack> ingredientStacks, PlayerEntity npc, int slot) {
     this.ingredientStacks = ingredientStacks;
     this.npc = npc;
+    this.slot = slot;
   }
 
   public JournalEntry build(ItemStack stack) {
-    return new JournalEntry(stack, getIngredients(), npc.getEntityName(), System.currentTimeMillis());
+    return new JournalEntry(stack, getIngredients(), npc.getEntityName(), slot, System.currentTimeMillis());
   }
 
   private Map<String, Integer> getIngredients() {

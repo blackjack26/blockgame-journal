@@ -3,6 +3,8 @@ package dev.bnjc.blockgamejournal.gamefeature.recipetracker.handlers;
 import dev.bnjc.blockgamejournal.BlockgameJournal;
 import dev.bnjc.blockgamejournal.gamefeature.recipetracker.RecipeTrackerGameFeature;
 import dev.bnjc.blockgamejournal.journal.Journal;
+import dev.bnjc.blockgamejournal.listener.screen.ScreenOpenedListener;
+import dev.bnjc.blockgamejournal.listener.screen.ScreenReceivedInventoryListener;
 import dev.bnjc.blockgamejournal.util.NbtUtil;
 import dev.bnjc.blockgamejournal.util.Profession;
 import lombok.Getter;
@@ -25,21 +27,29 @@ public class ProfileHandler {
   private static final Pattern LEVEL_PATTERN = Pattern.compile("Level: (\\d+)");
 
   private final RecipeTrackerGameFeature gameFeature;
-
-  @Getter
-  @Setter
   private int syncId = -1;
 
   public ProfileHandler(RecipeTrackerGameFeature gameFeature) {
     this.gameFeature = gameFeature;
   }
 
-  public ActionResult handleOpenScreen(OpenScreenS2CPacket packet) {
-    this.syncId = packet.getSyncId();
+  public void init() {
+    ScreenOpenedListener.EVENT.register(this::handleOpenScreen);
+    ScreenReceivedInventoryListener.EVENT.register(this::handleScreenInventory);
+  }
+
+  private ActionResult handleOpenScreen(OpenScreenS2CPacket packet) {
+    String screenName = packet.getName().getString();
+    if (screenName.equals("Your Character")) {
+      this.syncId = packet.getSyncId();
+    } else {
+      this.syncId = -1;
+    }
+
     return ActionResult.PASS;
   }
 
-  public ActionResult handleScreenInventory(InventoryS2CPacket packet) {
+  private ActionResult handleScreenInventory(InventoryS2CPacket packet) {
     if (packet.getSyncId() != this.syncId) {
       return ActionResult.PASS;
     }

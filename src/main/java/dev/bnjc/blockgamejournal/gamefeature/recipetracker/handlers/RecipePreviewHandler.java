@@ -6,6 +6,9 @@ import dev.bnjc.blockgamejournal.journal.Journal;
 import dev.bnjc.blockgamejournal.journal.JournalEntry;
 import dev.bnjc.blockgamejournal.journal.JournalEntryBuilder;
 import dev.bnjc.blockgamejournal.gamefeature.recipetracker.station.CraftingStationItem;
+import dev.bnjc.blockgamejournal.listener.interaction.SlotClickedListener;
+import dev.bnjc.blockgamejournal.listener.screen.ScreenOpenedListener;
+import dev.bnjc.blockgamejournal.listener.screen.ScreenReceivedInventoryListener;
 import dev.bnjc.blockgamejournal.util.ItemUtil;
 import lombok.Getter;
 import lombok.Setter;
@@ -39,9 +42,6 @@ public class RecipePreviewHandler {
   private static final int CONFIRM_BUTTON_INDEX = 34;
 
   private final RecipeTrackerGameFeature gameFeature;
-
-  @Getter
-  @Setter
   private int syncId = -1;
 
   @Getter
@@ -56,22 +56,35 @@ public class RecipePreviewHandler {
     this.gameFeature = gameFeature;
   }
 
-  public ActionResult handleOpenScreen(OpenScreenS2CPacket packet) {
-    this.syncId = packet.getSyncId();
+  public void init() {
+    ScreenOpenedListener.EVENT.register(this::handleOpenScreen);
+    ScreenReceivedInventoryListener.EVENT.register(this::handleScreenInventory);
+    SlotClickedListener.EVENT.register(this::handleSlotClicked);
+  }
 
-    // Reset the recipe page if the screen is not the same as the previous one
-    if (!isLoadingNextPage && !isLoadingPrevPage) {
-      recipePage = 0;
-      ingredients.clear();
+  private ActionResult handleOpenScreen(OpenScreenS2CPacket packet) {
+    String screenName = packet.getName().getString();
+
+    if (screenName.equals("Recipe Preview")) {
+      this.syncId = packet.getSyncId();
+
+      // Reset the recipe page if the screen is not the same as the previous one
+      if (!isLoadingNextPage && !isLoadingPrevPage) {
+        recipePage = 0;
+        ingredients.clear();
+      }
+
+      isLoadingNextPage = false;
+      isLoadingPrevPage = false;
+    } else {
+      this.syncId = -1;
+      this.reset();
     }
-
-    isLoadingNextPage = false;
-    isLoadingPrevPage = false;
 
     return ActionResult.PASS;
   }
 
-  public ActionResult handleScreenInventory(InventoryS2CPacket packet) {
+  private ActionResult handleScreenInventory(InventoryS2CPacket packet) {
     if (packet.getSyncId() != this.syncId) {
       return ActionResult.PASS;
     }
@@ -93,7 +106,7 @@ public class RecipePreviewHandler {
     return ActionResult.PASS;
   }
 
-  public ActionResult handleSlotClicked(int syncId, int slotId, int button, SlotActionType actionType, PlayerEntity player) {
+  private ActionResult handleSlotClicked(int syncId, int slotId, int button, SlotActionType actionType, PlayerEntity player) {
     if (syncId != this.syncId) {
       return ActionResult.PASS;
     }
@@ -185,8 +198,12 @@ public class RecipePreviewHandler {
         BlockgameJournal.LOGGER.debug("[Blockgame Journal] - [ ] {} x{}", ItemUtil.getName(stack), stack.getCount());
       }
 
-      JournalEntry entry = new JournalEntryBuilder(this.ingredients, this.gameFeature.getLastAttackedPlayer()).build(recipeItem);
       CraftingStationItem lastClickedItem = this.gameFeature.getCraftingStationHandler().getLastClickedItem();
+      JournalEntry entry = new JournalEntryBuilder(
+          this.ingredients,
+          this.gameFeature.getLastAttackedPlayer(),
+          lastClickedItem == null ? -1 : lastClickedItem.getSlot()
+      ).build(recipeItem);
 
       if (this.validateEntry(lastClickedItem, entry)) {
         if (lastClickedItem != null) {

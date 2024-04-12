@@ -11,9 +11,6 @@ import dev.bnjc.blockgamejournal.gui.screen.RecipeJournalScreen;
 import dev.bnjc.blockgamejournal.journal.Journal;
 import dev.bnjc.blockgamejournal.listener.chat.ReceiveChatListener;
 import dev.bnjc.blockgamejournal.listener.interaction.EntityAttackedListener;
-import dev.bnjc.blockgamejournal.listener.interaction.SlotClickedListener;
-import dev.bnjc.blockgamejournal.listener.screen.ScreenOpenedListener;
-import dev.bnjc.blockgamejournal.listener.screen.ScreenReceivedInventoryListener;
 import dev.bnjc.blockgamejournal.storage.Storage;
 import lombok.Getter;
 import net.fabricmc.fabric.api.client.command.v2.ClientCommandManager;
@@ -32,16 +29,12 @@ import net.minecraft.client.gui.screen.ingame.CreativeInventoryScreen;
 import net.minecraft.client.gui.screen.recipebook.RecipeBookProvider;
 import net.minecraft.client.gui.widget.TextFieldWidget;
 import net.minecraft.client.network.ClientPlayNetworkHandler;
-import net.minecraft.client.network.ServerInfo;
 import net.minecraft.client.option.KeyBinding;
 import net.minecraft.client.util.InputUtil;
 import net.minecraft.command.CommandRegistryAccess;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.item.ItemStack;
-import net.minecraft.network.packet.s2c.play.InventoryS2CPacket;
-import net.minecraft.network.packet.s2c.play.OpenScreenS2CPacket;
-import net.minecraft.screen.slot.SlotActionType;
 import net.minecraft.text.MutableText;
 import net.minecraft.text.Text;
 import net.minecraft.util.ActionResult;
@@ -74,6 +67,10 @@ public class RecipeTrackerGameFeature extends GameFeature {
   @Nullable
   private PlayerEntity lastAttackedPlayer = null;
 
+  @Getter
+  @Nullable
+  private Screen lastScreen = null;
+
   public RecipeTrackerGameFeature() {
     this.recipePreviewHandler = new RecipePreviewHandler(this);
     this.craftingStationHandler = new CraftingStationHandler(this);
@@ -86,9 +83,6 @@ public class RecipeTrackerGameFeature extends GameFeature {
 
     ClientPlayConnectionEvents.JOIN.register(this::handleJoin);
     ClientPlayConnectionEvents.DISCONNECT.register(this::handleDisconnect);
-    ScreenOpenedListener.EVENT.register(this::handleScreen);
-    ScreenReceivedInventoryListener.EVENT.register(this::handleScreenInventory);
-    SlotClickedListener.EVENT.register(this::handleSlotClicked);
     EntityAttackedListener.EVENT.register(this::handleEntityAttacked);
     ClientCommandRegistrationCallback.EVENT.register(this::registerCommand);
     ScreenEvents.AFTER_INIT.register(this::handleScreenInit);
@@ -99,6 +93,9 @@ public class RecipeTrackerGameFeature extends GameFeature {
         Journal.INSTANCE.getMetadata().incrementLoadedTime();
       }
     });
+
+    this.craftingStationHandler.init();
+    this.recipePreviewHandler.init();
 
     Storage.setup();
   }
@@ -117,69 +114,6 @@ public class RecipeTrackerGameFeature extends GameFeature {
   }
 
   // region Handlers
-
-  private ActionResult handleScreenInventory(InventoryS2CPacket packet) {
-    if (packet.getSyncId() == this.recipePreviewHandler.getSyncId()) {
-      return this.recipePreviewHandler.handleScreenInventory(packet);
-    }
-
-    if (packet.getSyncId() == this.craftingStationHandler.getSyncId()) {
-      return this.craftingStationHandler.handleScreenInventory(packet);
-    }
-
-    if (packet.getSyncId() == this.profileHandler.getSyncId()) {
-      return this.profileHandler.handleScreenInventory(packet);
-    }
-
-    return ActionResult.PASS;
-  }
-
-  /**
-   * Sets listeningSyncId to this screen's sync id if its name is "Recipe Preview"
-   */
-  private ActionResult handleScreen(OpenScreenS2CPacket packet) {
-    String screenName = packet.getName().getString();
-
-    // Reset the sync ids
-    this.recipePreviewHandler.setSyncId(-1);
-    this.craftingStationHandler.setSyncId(-1);
-    this.profileHandler.setSyncId(-1);
-
-    if (screenName.equals("Recipe Preview")) {
-      return this.recipePreviewHandler.handleOpenScreen(packet);
-    }
-
-    // Reset recipe page if no longer on a "Recipe Preview" screen
-    this.recipePreviewHandler.reset();
-
-    if (screenName.equals("Your Character")) {
-      return this.profileHandler.handleOpenScreen(packet);
-    }
-
-    // Look for screen name "Some Name (#page#/#max#)"
-    if (screenName.matches("^([\\w\\s]+)\\s\\(\\d+/\\d+\\)")) {
-      return this.craftingStationHandler.handleOpenScreen(packet);
-    }
-
-    // If the previous check failed, look for screen name "Some Name" where the name contains the last attacked player's name
-    if (lastAttackedPlayer != null && screenName.contains(lastAttackedPlayer.getEntityName())) {
-      return this.craftingStationHandler.handleOpenScreen(packet);
-    }
-
-    return ActionResult.PASS;
-  }
-
-  private ActionResult handleSlotClicked(int syncId, int slotId, int button, SlotActionType actionType, PlayerEntity player) {
-    if (syncId == this.recipePreviewHandler.getSyncId()) {
-      return this.recipePreviewHandler.handleSlotClicked(syncId, slotId, button, actionType, player);
-    }
-
-    if (syncId == this.craftingStationHandler.getSyncId()) {
-      return this.craftingStationHandler.handleSlotClicked(syncId, slotId, button, actionType, player);
-    }
-
-    return ActionResult.PASS;
-  }
 
   private void handleJoin(ClientPlayNetworkHandler handler, PacketSender sender, MinecraftClient client) {
     // Only load the journal if the player is joining the "mc.blockgame.info" server
@@ -265,6 +199,8 @@ public class RecipeTrackerGameFeature extends GameFeature {
   }
 
   private void handleScreenInit(MinecraftClient client, Screen screen, int scaledWidth, int scaledHeight) {
+    this.lastScreen = screen;
+
     if (screen instanceof AbstractInventoryScreen<?>) {
       ScreenKeyboardEvents.afterKeyPress(screen).register((parent, key, scancode, modifiers) -> {
         if (screen instanceof CreativeInventoryScreen creativeInventoryScreen) {

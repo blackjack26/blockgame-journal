@@ -23,13 +23,14 @@ public final class JournalEntry {
               Codec.INT.fieldOf("revisionId").forGetter(JournalEntry::getRevisionId),
               Codec.unboundedMap(Codec.STRING, Codec.INT).fieldOf("ingredients").forGetter(JournalEntry::getIngredients),
               Codec.STRING.fieldOf("npcName").forGetter(JournalEntry::getNpcName),
+              Codec.INT.fieldOf("slot").forGetter(JournalEntry::getSlot),
               Codec.LONG.fieldOf("storedAt").forGetter(JournalEntry::getStoredAt),
               Codec.BYTE.orElse((byte) -1).fieldOf("recipeKnown").forGetter(JournalEntry::getRecipeKnown),
               Codec.FLOAT.orElse(-1.0f).fieldOf("cost").forGetter(JournalEntry::getCost),
               Codec.STRING.orElse("").fieldOf("requiredClass").forGetter(JournalEntry::getRequiredClass),
               Codec.INT.orElse(-1).fieldOf("requiredLevel").forGetter(JournalEntry::getRequiredLevel)
-          ).apply(instance, (key, count, revisionId, ingredients, npcName, storedAt, recipeKnown, cost, requiredClass, requiredLevel) -> {
-            JournalEntry entry = new JournalEntry(key, count, revisionId, ingredients,  npcName, storedAt);
+          ).apply(instance, (key, count, revisionId, ingredients, npcName, slot, storedAt, recipeKnown, cost, requiredClass, requiredLevel) -> {
+            JournalEntry entry = new JournalEntry(key, count, revisionId, ingredients,  npcName, slot, storedAt);
             entry.setRecipeKnown(recipeKnown);
             entry.setCost(cost);
             entry.setRequiredClass(requiredClass);
@@ -64,6 +65,11 @@ public final class JournalEntry {
   private final String npcName;
 
   /**
+   * The slot in the inventory where the item was stored.
+   */
+  private final int slot;
+
+  /**
    * The timestamp when the item was stored in the journal.
    */
   private final Long storedAt;
@@ -96,16 +102,17 @@ public final class JournalEntry {
 
   private ItemStack knownItem;
 
-  public JournalEntry(ItemStack stack, Map<String, Integer> ingredients, String npcName, Long storedAt) {
-    this(ItemUtil.getKey(stack), stack.getCount(), ItemUtil.getRevisionId(stack).orElse(-1), ingredients, npcName, storedAt);
+  public JournalEntry(ItemStack stack, Map<String, Integer> ingredients, String npcName, int slot, Long storedAt) {
+    this(ItemUtil.getKey(stack), stack.getCount(), ItemUtil.getRevisionId(stack).orElse(-1), ingredients, npcName, slot, storedAt);
   }
 
-  public JournalEntry(String key, int count, int revisionId, Map<String, Integer> ingredients, String npcName, Long storedAt) {
+  public JournalEntry(String key, int count, int revisionId, Map<String, Integer> ingredients, String npcName, int slot, Long storedAt) {
     this.key = key;
     this.count = count;
     this.revisionId = revisionId;
     this.ingredients = ingredients;
     this.npcName = npcName;
+    this.slot = slot;
     this.storedAt = storedAt;
 
     this.recipeKnown = -1;

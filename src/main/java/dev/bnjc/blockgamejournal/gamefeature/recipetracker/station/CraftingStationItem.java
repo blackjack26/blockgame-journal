@@ -10,6 +10,7 @@ import java.util.Map;
 @Getter
 public class CraftingStationItem {
   private final ItemStack item;
+  private final int slot;
 
   @Setter
   private byte recipeKnown = -1;
@@ -32,8 +33,9 @@ public class CraftingStationItem {
    */
   private final Map<String, Integer> expectedIngredients;
 
-  public CraftingStationItem(ItemStack item) {
+  public CraftingStationItem(ItemStack item, int slot) {
     this.item = item;
+    this.slot = slot;
     this.expectedIngredients = new HashMap<>();
   }
 

@@ -92,6 +92,7 @@ public class Journal {
     // If the key does not exist, create a new list with the entry
     if (!entries.containsKey(key)) {
       entries.put(key, new ArrayList<>(List.of(entry)));
+      Journal.save();
       return;
     }
 

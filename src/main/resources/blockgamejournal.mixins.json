@@ -6,7 +6,8 @@
   "mixins": [],
   "client": [
     "network.ClientPlayNetworkHandlerMixin",
-    "network.ClientPlayerInteractionManagerMixin"
+    "network.ClientPlayerInteractionManagerMixin",
+    "gui.screen.HandledScreenMixin"
   ],
   "injectors": {
     "defaultRequire": 1
