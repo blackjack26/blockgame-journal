@@ -1,10 +1,16 @@
 plugins {
     id 'fabric-loom' version '1.5-SNAPSHOT'
     id 'maven-publish'
+    id 'com.modrinth.minotaur' version '2.+'
+    id 'org.ajoberstar.grgit' version '5.2.2'
+    id 'com.github.breadmoirai.github-release' version '2.5.2'
 }
 
 version = project.mod_version
 group = project.maven_group
+
+ext.releaseChangelog = "No Changelog Available"
+ext.releaseType = project.default_release_type
 
 base {
     archivesName = project.archives_base_name
@@ -85,7 +91,7 @@ java {
 
 jar {
     from("LICENSE") {
-        rename { "${it}_${project.archivesBaseName}"}
+        rename { "${it}_${project.archives_base_name}"}
     }
 }
 
@@ -108,4 +114,105 @@ publishing {
 
 loom {
     accessWidenerPath = file("src/main/resources/blockgamejournal.accesswidener")
+}
+
+def lastTag = project.hasProperty("lastTag") ? project.lastTag : null
+def currentTag = project.hasProperty("currentTag") ? project.currentTag : "HEAD"
+
+githubRelease {
+    setToken(System.getenv("GITHUB_TOKEN").toString())
+    setOwner(project.github_owner)
+    setRepo(project.github_repo)
+    setTagName(currentTag)
+    setTargetCommitish(getBranch())
+    setReleaseName("v$version for $project.minecraft_version")
+    setGenerateReleaseNotes(true)
+    setBody(releaseChangelog)
+    setPrerelease(releaseType != "release")
+    setReleaseAssets(file("${project.buildDir}/libs/${archives_base_name}-${version}.jar"))
+}
+
+String getBranch() {
+    def ENV = System.getenv()
+    if (ENV.GITHUB_REF) {
+        def branch = ENV.GITHUB_REF
+        return branch.substring(branch.lastIndexOf('/') + 1)
+    }
+
+    if (grgit == null) {
+        return "unknown"
+    }
+
+    def branch = grgit.branch.current().name
+    return branch.substring(branch.lastIndexOf('/') + 1)
+}
+
+tasks.register('generateChangelog') {
+    def changes = StringBuilder.getDeclaredConstructor().newInstance();
+    if (!project.hasProperty("lastTag") || !project.hasProperty("currentTag")) {
+        println "Missing lastTag or currentTag property, skipping changelog generation"
+        return;
+    }
+
+    def commits = "git log --max-count=${project.changelog_max_commit_search} --pretty=format:\"%b\" $lastTag..$currentTag".execute()
+    println "Last version: $lastTag"
+    println "Current version: $currentTag"
+
+    if (currentTag.contains("-alpha")) {
+        releaseType = "alpha"
+    } else if (currentTag.contains("-beta") || currentTag.contains("-rc") || currentTag.contains("-pre")) {
+        releaseType = "beta"
+    } else {
+        releaseType = "release"
+    }
+    println "Release type: $releaseType"
+
+    commits.in.eachLine { line ->
+        def processedLine = line.toString()
+        if (processedLine.startsWith("\"")) {
+            processedLine = processedLine.substring(1)
+        }
+        if (processedLine.endsWith("\"")) {
+            processedLine = processedLine.substring(0, processedLine.length() - 1)
+        }
+        println "Reading line: $processedLine"
+
+        if (processedLine.startsWith("- ")) {
+            println "Adding changelog line:"
+            println "  $processedLine"
+            if (changes.length() == 0) {
+                changes << processedLine
+            } else {
+                changes << "\n$processedLine"
+            }
+        }
+    }
+
+    commits.err.eachLine { line -> println line }
+    commits.waitFor()
+
+    println "Changelog:"
+    releaseChangelog = changes.toString()
+    if (releaseChangelog.isEmpty()) {
+        releaseChangelog = "No Changelog Available"
+    }
+    println releaseChangelog
+}
+
+modrinth {
+    token = System.getenv("MODRINTH_TOKEN")
+    projectId = project.modrinth_id
+    versionNumber = "$version"
+    versionName = "v$version for $project.minecraft_version"
+    changelog = releaseChangelog
+    uploadFile = file("${project.buildDir}/libs/${archives_base_name}-${version}.jar")
+    versionType = releaseType
+    gameVersions = ["1.20.2"]
+    loaders = ["fabric"]
+    dependencies {
+        required.project "fabric-api"
+        required.project "cloth-config"
+        optional.project "modmenu"
+        optional.project "emi"
+    }
 }
