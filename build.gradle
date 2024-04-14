@@ -120,16 +120,16 @@ def lastTag = project.hasProperty("lastTag") ? project.lastTag : null
 def newTag = project.hasProperty("currentTag") ? project.currentTag : "v$version"
 
 githubRelease {
-    setToken(System.getenv("GITHUB_TOKEN").toString())
-    setOwner(project.github_owner)
-    setRepo(project.github_repo)
-    setTagName(newTag)
-    setTargetCommitish(getBranch())
-    setReleaseName("${mod_name} $newTag")
-    setGenerateReleaseNotes(true)
-    setBody(releaseChangelog)
-    setPrerelease(releaseType != "release")
-    setReleaseAssets(file("${project.buildDir}/libs/${archives_base_name}-${version}.jar"))
+    token = System.getenv("GITHUB_TOKEN")
+    owner = project.github_owner
+    repo = project.github_repo
+    tagName = newTag
+    targetCommitish = getBranch()
+    releaseName = "${mod_name} ${newTag}"
+    generateReleaseNotes = true
+    body = releaseChangelog
+    prerelease = releaseType != "release"
+    releaseAssets jar.archiveFile
 }
 
 String getBranch() {
