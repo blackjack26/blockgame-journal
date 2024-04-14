@@ -117,15 +117,15 @@ loom {
 }
 
 def lastTag = project.hasProperty("lastTag") ? project.lastTag : null
-def currentTag = project.hasProperty("currentTag") ? project.currentTag : "HEAD"
+def newTag = project.hasProperty("currentTag") ? project.currentTag : "v$version"
 
 githubRelease {
     setToken(System.getenv("GITHUB_TOKEN").toString())
     setOwner(project.github_owner)
     setRepo(project.github_repo)
-    setTagName(currentTag)
+    setTagName(newTag)
     setTargetCommitish(getBranch())
-    setReleaseName("v$version for $project.minecraft_version")
+    setReleaseName("${mod_name} $newTag")
     setGenerateReleaseNotes(true)
     setBody(releaseChangelog)
     setPrerelease(releaseType != "release")
@@ -149,18 +149,13 @@ String getBranch() {
 
 tasks.register('generateChangelog') {
     def changes = StringBuilder.getDeclaredConstructor().newInstance();
-    if (!project.hasProperty("lastTag") || !project.hasProperty("currentTag")) {
-        println "Missing lastTag or currentTag property, skipping changelog generation"
-        return;
-    }
-
-    def commits = "git log --max-count=${project.changelog_max_commit_search} --pretty=format:\"%b\" $lastTag..$currentTag".execute()
+    def commits = "git log --max-count=${project.changelog_max_commit_search} --pretty=format:\"%b\" $lastTag..$newTag".execute()
     println "Last version: $lastTag"
-    println "Current version: $currentTag"
+    println "New version: $newTag"
 
-    if (currentTag.contains("-alpha")) {
+    if (newTag.contains("-alpha")) {
         releaseType = "alpha"
-    } else if (currentTag.contains("-beta") || currentTag.contains("-rc") || currentTag.contains("-pre")) {
+    } else if (newTag.contains("-beta") || newTag.contains("-rc") || newTag.contains("-pre")) {
         releaseType = "beta"
     } else {
         releaseType = "release"
@@ -203,7 +198,7 @@ modrinth {
     token = System.getenv("MODRINTH_TOKEN")
     projectId = project.modrinth_id
     versionNumber = "$version"
-    versionName = "v$version for $project.minecraft_version"
+    versionName = "$mod_name $newTag"
     changelog = releaseChangelog
     uploadFile = file("${project.buildDir}/libs/${archives_base_name}-${version}.jar")
     versionType = releaseType
