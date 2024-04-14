@@ -144,8 +144,9 @@ public class JournalScreen extends Screen {
       JournalMode mode = modes.get(index);
       ItemStack stack = new ItemStack(mode.icon());
 
-      if (mode.type() == JournalMode.Type.NPC_SEARCH) {
-        stack = Journal.INSTANCE.getKnownNpcItem("Mayor McCheese");
+      ItemStack mmc = Journal.INSTANCE.getKnownNpcItem("Mayor McCheese");
+      if (mode.type() == JournalMode.Type.NPC_SEARCH && mmc != null) {
+        stack = mmc;
       }
 
       ModeButton modeButton = this.addDrawableChild(new ModeButton(

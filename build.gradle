@@ -9,9 +9,6 @@ plugins {
 version = project.mod_version
 group = project.maven_group
 
-ext.releaseChangelog = "No Changelog Available"
-ext.releaseType = project.default_release_type
-
 base {
     archivesName = project.archives_base_name
 }
@@ -119,33 +116,8 @@ loom {
 def lastTag = project.hasProperty("lastTag") ? project.lastTag : null
 def newTag = project.hasProperty("currentTag") ? project.currentTag : "v$version"
 
-githubRelease {
-    token = System.getenv("GITHUB_TOKEN")
-    owner = project.github_owner
-    repo = project.github_repo
-    tagName = newTag
-    targetCommitish = getBranch()
-    releaseName = "${mod_name} ${newTag}"
-    generateReleaseNotes = true
-    body = releaseChangelog
-    prerelease = releaseType != "release"
-    releaseAssets jar.archiveFile
-}
-
-String getBranch() {
-    def ENV = System.getenv()
-    if (ENV.GITHUB_REF) {
-        def branch = ENV.GITHUB_REF
-        return branch.substring(branch.lastIndexOf('/') + 1)
-    }
-
-    if (grgit == null) {
-        return "unknown"
-    }
-
-    def branch = grgit.branch.current().name
-    return branch.substring(branch.lastIndexOf('/') + 1)
-}
+def releaseChangelog = "No Changelog Available"
+def releaseType = project.default_release_type
 
 tasks.register('generateChangelog') {
     def changes = StringBuilder.getDeclaredConstructor().newInstance();
@@ -194,13 +166,41 @@ tasks.register('generateChangelog') {
     println releaseChangelog
 }
 
+githubRelease {
+    token = System.getenv("GITHUB_TOKEN").toString()
+    owner = project.github_owner
+    repo = project.github_repo
+    tagName = newTag
+    targetCommitish = getBranch()
+    releaseName = "${mod_name} ${newTag}"
+    generateReleaseNotes = true
+    body = releaseChangelog
+    prerelease = releaseType != "release"
+    releaseAssets jar.archiveFile
+}
+
+String getBranch() {
+    def ENV = System.getenv()
+    if (ENV.GITHUB_REF) {
+        def branch = ENV.GITHUB_REF
+        return branch.substring(branch.lastIndexOf('/') + 1)
+    }
+
+    if (grgit == null) {
+        return "unknown"
+    }
+
+    def branch = grgit.branch.current().name
+    return branch.substring(branch.lastIndexOf('/') + 1)
+}
+
 modrinth {
     token = System.getenv("MODRINTH_TOKEN")
     projectId = project.modrinth_id
     versionNumber = "$version"
     versionName = "$mod_name $newTag"
     changelog = releaseChangelog
-    uploadFile = file("${project.buildDir}/libs/${archives_base_name}-${version}.jar")
+    uploadFile = jar.archiveFile
     versionType = releaseType
     gameVersions = ["1.20.2"]
     loaders = ["fabric"]
