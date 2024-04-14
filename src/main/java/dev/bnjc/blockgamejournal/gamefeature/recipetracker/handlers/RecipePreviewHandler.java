@@ -180,11 +180,6 @@ public class RecipePreviewHandler {
       BlockgameJournal.LOGGER.debug("[Blockgame Journal] Ingredients already stored for page {}", recipePage);
     }
 
-    if (this.ingredients.isEmpty()) {
-      BlockgameJournal.LOGGER.warn("[Blockgame Journal] No ingredients found in the recipe");
-      return;
-    }
-
     if (!hasNextPageButton) {
       // Add or update all the known ingredients
       for (ItemStack stack : this.ingredients) {
@@ -231,7 +226,12 @@ public class RecipePreviewHandler {
             LOGGER.debug("[Blockgame Journal] - [ ] Required Level: {}", requiredLevel);
           }
         }
-        Journal.INSTANCE.addEntry(recipeItem, entry);
+
+        if (this.ingredients.isEmpty() && Float.compare(entry.getCost(), -1f) == 0) {
+          BlockgameJournal.LOGGER.warn("[Blockgame Journal] No ingredients found in the recipe, and no cost was set");
+        } else {
+          Journal.INSTANCE.addEntry(recipeItem, entry);
+        }
       } else {
         BlockgameJournal.LOGGER.warn("[Blockgame Journal] Recipe validation failed");
       }
@@ -262,11 +262,6 @@ public class RecipePreviewHandler {
     }
 
     // Validate the expected ingredients
-    if (item.getExpectedIngredients().isEmpty()) {
-      BlockgameJournal.LOGGER.warn("[Blockgame Journal] No expected ingredients found");
-      return false;
-    }
-
     if (entry.getIngredients().size() != item.getExpectedIngredients().size()) {
       BlockgameJournal.LOGGER.warn("[Blockgame Journal] Ingredient count mismatch");
       return false;

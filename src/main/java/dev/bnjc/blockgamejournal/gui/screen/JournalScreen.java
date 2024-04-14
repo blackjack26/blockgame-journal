@@ -163,6 +163,9 @@ public class JournalScreen extends Screen {
             buttons.get(this.currentMode).setHighlighted(true);
 
             this.search.setText("");
+            JournalScreen.lastSearch = "";
+            this.search.setFocused(true);
+
             this.setSelectedNpc(null);
           }
       ));
