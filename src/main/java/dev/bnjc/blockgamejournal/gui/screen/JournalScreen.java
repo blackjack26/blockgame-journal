@@ -1,17 +1,13 @@
 package dev.bnjc.blockgamejournal.gui.screen;
 
 import dev.bnjc.blockgamejournal.BlockgameJournal;
-import dev.bnjc.blockgamejournal.gui.widget.ItemListWidget;
-import dev.bnjc.blockgamejournal.gui.widget.ModeButton;
-import dev.bnjc.blockgamejournal.gui.widget.SearchWidget;
-import dev.bnjc.blockgamejournal.gui.widget.VerticalScrollWidget;
+import dev.bnjc.blockgamejournal.gui.widget.*;
 import dev.bnjc.blockgamejournal.journal.Journal;
 import dev.bnjc.blockgamejournal.journal.JournalMode;
+import dev.bnjc.blockgamejournal.journal.npc.NPCEntity;
 import dev.bnjc.blockgamejournal.util.GuiUtil;
-import dev.bnjc.blockgamejournal.util.ItemUtil;
 import dev.bnjc.blockgamejournal.util.SearchUtil;
-import lombok.Getter;
-import lombok.Setter;
+import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.screen.Screen;
 import net.minecraft.client.gui.tooltip.Tooltip;
@@ -48,19 +44,19 @@ public class JournalScreen extends Screen {
   private static final int MODE_ICON_SPACING = 24;
 
   private static @Nullable String lastSearch = null;
+  private static @Nullable NPCEntity selectedNpc = null;
 
   private int left = 0;
   private int top = 0;
 
   private JournalMode.Type currentMode = JournalMode.Type.ITEM_SEARCH;
 
-  private @Nullable String selectedNpc = null;
-
   private final Screen parent;
   private TextFieldWidget search;
   private ItemListWidget itemList;
   private VerticalScrollWidget scroll;
   private ButtonWidget closeButton;
+  private NPCWidget npcWidget;
 
   private List<ItemStack> items = Collections.emptyList();
 
@@ -72,11 +68,11 @@ public class JournalScreen extends Screen {
 
   @Override
   protected void init() {
-//    if (Journal.INSTANCE == null) {
-//      // TODO: Show error screen
-//      MinecraftClient.getInstance().setScreen(null);
-//      return;
-//    }
+    if (Journal.INSTANCE == null) {
+      // TODO: Show error screen
+      MinecraftClient.getInstance().setScreen(null);
+      return;
+    }
 
     this.left = (this.width - MENU_WIDTH) / 2;
     this.top = (this.height - MENU_HEIGHT) / 2;
@@ -134,7 +130,7 @@ public class JournalScreen extends Screen {
         this.top + 5,
         button -> this.setSelectedNpc(null)
     );
-    this.closeButton.visible = false;
+    this.closeButton.visible = JournalScreen.selectedNpc != null;
     this.addDrawableChild(this.closeButton);
 
     ///// Mode Buttons
@@ -166,8 +162,8 @@ public class JournalScreen extends Screen {
             this.currentMode = mode.type();
             buttons.get(this.currentMode).setHighlighted(true);
 
-            this.updateItems(null);
             this.search.setText("");
+            this.setSelectedNpc(null);
           }
       ));
       modeButton.setTooltip(Tooltip.of(Text.translatable("blockgamejournal.mode." + mode.type().name())));
@@ -178,6 +174,10 @@ public class JournalScreen extends Screen {
     if (buttons.containsKey(this.currentMode)) {
       buttons.get(this.currentMode).setHighlighted(true);
     }
+
+    // NPC Widget
+    this.npcWidget = new NPCWidget(JournalScreen.selectedNpc, this.left + MENU_WIDTH + 4, this.top, 68, 74);
+    this.addDrawable(this.npcWidget);
   }
 
   @Override
@@ -185,7 +185,11 @@ public class JournalScreen extends Screen {
     super.render(context, mouseX, mouseY, delta);
 
     // Title
-    context.drawText(textRenderer, this.title, this.left + TITLE_LEFT, this.top + TITLE_TOP, 0x404040, false);
+    Text titleText = this.title;
+    if (JournalScreen.selectedNpc != null) {
+      titleText = Text.translatable("blockgamejournal.recipe_journal.npc", JournalScreen.selectedNpc.getNpcName().name());
+    }
+    context.drawText(textRenderer, titleText, this.left + TITLE_LEFT, this.top + TITLE_TOP, 0x404040, false);
   }
 
   @Override
@@ -199,11 +203,18 @@ public class JournalScreen extends Screen {
   @Override
   public void close() {
     JournalScreen.lastSearch = null; // Clear search
+    JournalScreen.selectedNpc = null; // Clear selected NPC
     super.close();
   }
 
   public void setSelectedNpc(String npc) {
-    this.selectedNpc = npc;
+    if (npc == null) {
+      JournalScreen.selectedNpc = null;
+    } else {
+      JournalScreen.selectedNpc = new NPCEntity(MinecraftClient.getInstance().world, npc);
+    }
+    this.npcWidget.setEntity(JournalScreen.selectedNpc);
+
     this.updateItems(null);
     this.closeButton.visible = npc != null;
   }
@@ -226,9 +237,9 @@ public class JournalScreen extends Screen {
     }
     else if (this.currentMode == JournalMode.Type.NPC_SEARCH) {
       // If filter matches "npc:Some Name", filter by recipes that have that NPC
-      if (this.selectedNpc != null) {
+      if (JournalScreen.selectedNpc != null) {
         this.items = Journal.INSTANCE.getEntries().entrySet().stream()
-            .filter(entry -> entry.getValue().stream().anyMatch(e -> e.getNpcName().toLowerCase(Locale.ROOT).equals(this.selectedNpc.toLowerCase(Locale.ROOT))))
+            .filter(entry -> entry.getValue().stream().anyMatch(e -> e.getNpcName().toLowerCase(Locale.ROOT).equals(JournalScreen.selectedNpc.getNpcWorldName().toLowerCase(Locale.ROOT))))
             .map(entry -> Journal.INSTANCE.getKnownItem(entry.getKey()))
             .filter(Objects::nonNull)
             .sorted(Comparator.comparing(a -> a.getName().getString().toLowerCase(Locale.ROOT)))

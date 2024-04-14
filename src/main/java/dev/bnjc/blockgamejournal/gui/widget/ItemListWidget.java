@@ -12,6 +12,7 @@ import net.minecraft.client.gui.screen.Screen;
 import net.minecraft.client.gui.screen.narration.NarrationMessageBuilder;
 import net.minecraft.client.gui.widget.ClickableWidget;
 import net.minecraft.item.ItemStack;
+import net.minecraft.item.PlayerHeadItem;
 import net.minecraft.text.Text;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.math.MathHelper;
@@ -82,10 +83,12 @@ public class ItemListWidget extends ClickableWidget {
       MinecraftClient.getInstance().setScreen(new RecipeDisplay(item, this.parent));
     }
     else if (this.mode == JournalMode.Type.NPC_SEARCH) {
-      if (this.parent instanceof JournalScreen journalScreen) {
-        if (item.hasNbt()) {
+      if (item.getItem() instanceof PlayerHeadItem) {
+        if (this.parent instanceof JournalScreen journalScreen && item.hasNbt()) {
           journalScreen.setSelectedNpc(item.getNbt().getString(Journal.NPC_NAME_KEY));
         }
+      } else {
+        MinecraftClient.getInstance().setScreen(new RecipeDisplay(item, this.parent));
       }
     }
   }
