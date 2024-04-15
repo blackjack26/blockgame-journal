@@ -1,16 +1,68 @@
 plugins {
     id 'fabric-loom' version '1.5-SNAPSHOT'
     id 'maven-publish'
-    id 'com.modrinth.minotaur' version '2.+'
     id 'org.ajoberstar.grgit' version '5.2.2'
-    id 'com.github.breadmoirai.github-release' version '2.5.2'
+    id "me.shedaniel.unified-publishing" version "0.1.+"
 }
 
+archivesBaseName = project.archives_base_name
 version = project.mod_version
 group = project.maven_group
 
-base {
-    archivesName = project.archives_base_name
+def lastTag = project.hasProperty("lastTag") ? project.lastTag : null
+def newTag = project.hasProperty("currentTag") ? project.currentTag : "v$version"
+
+ext {
+    releaseType = {
+        def type = "release"
+        if (newTag.contains("-alpha")) {
+            type = "alpha"
+        } else if (newTag.contains("-beta") || newTag.contains("-rc") || newTag.contains("-pre")) {
+            type = "beta"
+        }
+        return type
+    }
+    releaseChangelog = {
+        def changes = StringBuilder.getDeclaredConstructor().newInstance();
+        def commits = "git log --max-count=${project.changelog_max_commit_search} --pretty=format:\"%b\" $lastTag..$newTag".execute()
+        println "Last version: $lastTag"
+        println "New version: $newTag"
+
+        commits.in.eachLine { line ->
+            def processedLine = line.toString()
+            if (processedLine.startsWith("\"")) {
+                processedLine = processedLine.substring(1)
+            }
+            if (processedLine.endsWith("\"")) {
+                processedLine = processedLine.substring(0, processedLine.length() - 1)
+            }
+            println "Reading line: $processedLine"
+
+            if (processedLine.startsWith("- ")) {
+                println "Adding changelog line:"
+                println "  $processedLine"
+                if (changes.length() == 0) {
+                    changes << processedLine
+                } else {
+                    changes << "\n$processedLine"
+                }
+            }
+        }
+
+        commits.err.eachLine { line -> println line }
+        commits.waitFor()
+
+        println "Changelog:"
+        def changelog = changes.toString().trim()
+        if (changelog.isEmpty()) {
+            changelog = "No Changelog Available"
+        }
+        println "${changelog}"
+
+        if (!rootProject.buildDir.exists()) rootProject.buildDir.mkdirs()
+        new File(rootProject.buildDir, "CHANGELOG.md").text = changelog
+        return changelog
+    }
 }
 
 repositories {
@@ -88,7 +140,7 @@ java {
 
 jar {
     from("LICENSE") {
-        rename { "${it}_${project.archives_base_name}"}
+        rename { "${it}_${archivesBaseName}"}
     }
 }
 
@@ -99,115 +151,43 @@ publishing {
             from components.java
         }
     }
-
-    // See https://docs.gradle.org/current/userguide/publishing_maven.html for information on how to set up publishing.
-    repositories {
-        // Add repositories to publish to here.
-        // Notice: This block does NOT have the same function as the block in the top level.
-        // The repositories here will be used for publishing your artifact, not for
-        // retrieving dependencies.
-    }
 }
 
 loom {
     accessWidenerPath = file("src/main/resources/blockgamejournal.accesswidener")
 }
 
-def lastTag = project.hasProperty("lastTag") ? project.lastTag : null
-def newTag = project.hasProperty("currentTag") ? project.currentTag : "v$version"
+unifiedPublishing {
+    project {
+        displayName = "${project.mod_name} ${newTag}"
+        version = project.version
+        changelog = project.releaseChangelog()
+        releaseType = project.releaseType()
+        gameVersions = ["1.20.2"]
+        gameLoaders = ["fabric"]
 
-def releaseChangelog = "No Changelog Available"
-def releaseType = project.default_release_type
+        mainPublication tasks.remapJar
 
-tasks.register('generateChangelog') {
-    def changes = StringBuilder.getDeclaredConstructor().newInstance();
-    def commits = "git log --max-count=${project.changelog_max_commit_search} --pretty=format:\"%b\" $lastTag..$newTag".execute()
-    println "Last version: $lastTag"
-    println "New version: $newTag"
+        relations {
+            depends {
+                modrinth = "fabric-api"
+            }
 
-    if (newTag.contains("-alpha")) {
-        releaseType = "alpha"
-    } else if (newTag.contains("-beta") || newTag.contains("-rc") || newTag.contains("-pre")) {
-        releaseType = "beta"
-    } else {
-        releaseType = "release"
-    }
-    println "Release type: $releaseType"
+            depends {
+                modrinth = "cloth-config"
+            }
 
-    commits.in.eachLine { line ->
-        def processedLine = line.toString()
-        if (processedLine.startsWith("\"")) {
-            processedLine = processedLine.substring(1)
-        }
-        if (processedLine.endsWith("\"")) {
-            processedLine = processedLine.substring(0, processedLine.length() - 1)
-        }
-        println "Reading line: $processedLine"
-
-        if (processedLine.startsWith("- ")) {
-            println "Adding changelog line:"
-            println "  $processedLine"
-            if (changes.length() == 0) {
-                changes << processedLine
-            } else {
-                changes << "\n$processedLine"
+            optional {
+                modrinth = "modmenu"
             }
         }
-    }
 
-    commits.err.eachLine { line -> println line }
-    commits.waitFor()
-
-    println "Changelog:"
-    releaseChangelog = changes.toString()
-    if (releaseChangelog.isEmpty()) {
-        releaseChangelog = "No Changelog Available"
-    }
-    println releaseChangelog
-}
-
-githubRelease {
-    token = System.getenv("GITHUB_TOKEN").toString()
-    owner = project.github_owner
-    repo = project.github_repo
-    tagName = newTag
-    targetCommitish = getBranch()
-    releaseName = "${mod_name} ${newTag}"
-    generateReleaseNotes = true
-    body = releaseChangelog
-    prerelease = releaseType != "release"
-    releaseAssets jar.archiveFile
-}
-
-String getBranch() {
-    def ENV = System.getenv()
-    if (ENV.GITHUB_REF) {
-        def branch = ENV.GITHUB_REF
-        return branch.substring(branch.lastIndexOf('/') + 1)
-    }
-
-    if (grgit == null) {
-        return "unknown"
-    }
-
-    def branch = grgit.branch.current().name
-    return branch.substring(branch.lastIndexOf('/') + 1)
-}
-
-modrinth {
-    token = System.getenv("MODRINTH_TOKEN")
-    projectId = project.modrinth_id
-    versionNumber = "$version"
-    versionName = "$mod_name $newTag"
-    changelog = releaseChangelog
-    uploadFile = jar.archiveFile
-    versionType = releaseType
-    gameVersions = ["1.20.2"]
-    loaders = ["fabric"]
-    dependencies {
-        required.project "fabric-api"
-        required.project "cloth-config"
-        optional.project "modmenu"
-        optional.project "emi"
+        var MODRINTH_TOKEN = project.findProperty("MODRINTH_TOKEN") ?: System.getenv("MODRINTH_TOKEN")
+        if (MODRINTH_TOKEN != null && MODRINTH_TOKEN instanceof String) {
+            modrinth {
+                token = MODRINTH_TOKEN
+                id = project.modrinth_id
+            }
+        }
     }
 }

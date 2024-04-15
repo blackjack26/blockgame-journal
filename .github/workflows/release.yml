@@ -14,16 +14,13 @@ permissions:
 
 jobs:
   release:
-    strategy:
-      matrix:
-        java: [17]
-        os: [ubuntu-22.04]
-    runs-on: ${{ matrix.os }}
+    runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3
         with:
           fetch-depth: 0
+
       - name: Create version tag
         uses: actions/github-script@v6
         with:
@@ -34,26 +31,48 @@ jobs:
               ref: "refs/tags/v${{ github.event.inputs.version }}",
               sha: context.sha
             })
+
       - name: Fetch tags
         run: git fetch --tags
-      - name: Validate Gradle wrapper
-        uses: gradle/wrapper-validation-action@v1
-      - name: Setup JDK ${{ matrix.java }}
+
+      - name: Setup Java
         uses: actions/setup-java@v3
         with:
-          distribution: zulu
-          java-version: ${{ matrix.java }}
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Validate Gradle wrapper
+        uses: gradle/wrapper-validation-action@v1
+
       - name: Make Grade wrapper executable
         if: ${{ runner.os != 'Windows' }}
         run: chmod +x ./gradlew
-      - name: Build
-        run: ./gradlew generateChangelog build githubRelease modrinth --stacktrace -PlastTag="v${{ github.event.inputs.previousVersion }}" -PcurrentTag="v${{ github.event.inputs.version }}"
+
+      - name: Build with Gradle
+        uses: gradle/gradle-build-action@v2
+        with:
+          arguments: build --stacktrace
+
+      - name: Archive Results
+        uses: actions/upload-artifact@v3
+        with:
+          name: BlockgameJournal-${{ github.event.inputs.version }}
+          path: build/libs/
+
+      - name: Release Version to GitHub
+        uses: softprops/action-gh-release@v1
+        with:
+          body_path: ${{ github.workspace }}/build/CHANGELOG.md
+          tag_name: v${{ github.event.inputs.version }}
+          name: Blockgame Journal v${{ github.event.inputs.version }}
+          target_commitish: ${{ github.sha }}
+          files: build/libs/*.jar
+
+      - name: Release Version to 3rd Parties
+        uses: gradle/gradle-build-action@v2
+        if: ${{ github.triggering_actor == 'blackjack26' }}
         env:
           GITHUB_TOKEN: ${{ secrets.GH_API_KEY }}
           MODRINTH_TOKEN: ${{ secrets.MODRINTH_TOKEN }}
-      - name: Capture build artifacts
-        if: ${{ runner.os == 'Linux' && matrix.java == '17' }}
-        uses: actions/upload-artifact@v3
         with:
-          name: Artifacts
-          path: build/libs/
+          arguments: publish publishUnified --stacktrace -PlastTag="v${{ github.event.inputs.previousVersion }}" -PcurrentTag="v${{ github.event.inputs.version }}"
