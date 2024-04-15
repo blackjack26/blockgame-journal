@@ -51,7 +51,7 @@ jobs:
       - name: Build with Gradle
         uses: gradle/gradle-build-action@v2
         with:
-          arguments: build --stacktrace
+          arguments: build --stacktrace -PlastTag=v${{ github.event.inputs.previousVersion }} -PcurrentTag=v${{ github.event.inputs.version }}
 
       - name: Archive Results
         uses: actions/upload-artifact@v3
@@ -67,6 +67,7 @@ jobs:
           name: Blockgame Journal v${{ github.event.inputs.version }}
           target_commitish: ${{ github.sha }}
           files: build/libs/*.jar
+          prerelease: ${{ endsWith(github.event.inputs.version, "-alpha") || endsWith(github.event.inputs.version, "-beta") }}
 
       - name: Release Version to 3rd Parties
         uses: gradle/gradle-build-action@v2
@@ -75,4 +76,4 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GH_API_KEY }}
           MODRINTH_TOKEN: ${{ secrets.MODRINTH_TOKEN }}
         with:
-          arguments: publish publishUnified --stacktrace -PlastTag="v${{ github.event.inputs.previousVersion }}" -PcurrentTag="v${{ github.event.inputs.version }}"
+          arguments: publish publishUnified --stacktrace -PlastTag=v${{ github.event.inputs.previousVersion }} -PcurrentTag=v${{ github.event.inputs.version }}
