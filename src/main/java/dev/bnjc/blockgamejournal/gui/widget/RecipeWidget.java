@@ -1,8 +1,10 @@
 package dev.bnjc.blockgamejournal.gui.widget;
 
+import dev.bnjc.blockgamejournal.BlockgameJournal;
 import dev.bnjc.blockgamejournal.gui.screen.RecipeDisplay;
 import dev.bnjc.blockgamejournal.journal.Journal;
 import dev.bnjc.blockgamejournal.journal.JournalEntry;
+import dev.bnjc.blockgamejournal.journal.recipe.JournalPlayerInventory;
 import dev.bnjc.blockgamejournal.util.GuiUtil;
 import dev.bnjc.blockgamejournal.util.ItemUtil;
 import dev.bnjc.blockgamejournal.util.Profession;
@@ -36,7 +38,7 @@ public class RecipeWidget extends ClickableWidget {
 
   @Setter
   private @Nullable JournalEntry entry;
-  private List<ItemStack> inventory;
+  private final JournalPlayerInventory inventory;
 
   private double scrollY;
   private int scrollTop;
@@ -56,15 +58,7 @@ public class RecipeWidget extends ClickableWidget {
     this.lastY = y + 2;
     setScrollY(0.0);
 
-    // Populate inventory
-    Entity entity = MinecraftClient.getInstance().getCameraEntity();
-    if (entity instanceof ClientPlayerEntity player) {
-      PlayerInventory inv = player.getInventory();
-      this.inventory = new ArrayList<>();
-      this.inventory.addAll(inv.main);
-      this.inventory.addAll(inv.armor);
-      this.inventory.addAll(inv.offHand);
-    }
+    this.inventory = JournalPlayerInventory.defaultInventory();
   }
 
   @Override
@@ -119,9 +113,11 @@ public class RecipeWidget extends ClickableWidget {
     if (mouseY < (double) this.scrollTop) {
       this.setScrollY(0.0);
     } else if (mouseY > (double) (this.scrollTop + this.getScrollWindowHeight())) {
-      this.setScrollY(this.lastY - this.getBottom());
+      this.setScrollY(this.getMaxScrollY());
     } else {
-      this.setScrollY(this.scrollY + deltaY);
+      int h = this.getScrollbarThumbHeight();
+      double d = Math.max(1, this.getMaxScrollY() / (this.getScrollWindowHeight() - h));
+      this.setScrollY(this.scrollY + deltaY * d);
     }
 
     return true;
@@ -329,12 +325,11 @@ public class RecipeWidget extends ClickableWidget {
       context.drawItem(item, x, this.lastY);
 
       // Render text
-      int requiredCount = this.requiredItems(item);
-      boolean hasEntry = Journal.INSTANCE != null && Journal.INSTANCE.hasJournalEntry(itemKey);
-
-      MutableText text = Text.literal(requiredCount > 0 ? "✖ " : "✔ ").formatted(requiredCount > 0 ? Formatting.DARK_RED : Formatting.DARK_GREEN);
+      boolean hasEnough = this.inventory.hasEnough(item);
+      MutableText text = Text.literal(hasEnough ? "✔ " : "✖ ").formatted(hasEnough ? Formatting.DARK_GREEN : Formatting.DARK_RED);
       MutableText itemText = Text.literal(ItemUtil.getName(item)).formatted(Formatting.DARK_GRAY);
-      if (hasEntry) {
+
+      if (Journal.INSTANCE != null && Journal.INSTANCE.hasJournalEntry(itemKey)) {
         itemText.formatted(Formatting.UNDERLINE);
       }
       text.append(itemText);
@@ -358,24 +353,9 @@ public class RecipeWidget extends ClickableWidget {
   private void renderScrollbar(DrawContext context) {
     int height = this.getScrollbarThumbHeight();
     int x = this.getX() + this.getWidth();
-    int y = Math.max(this.scrollTop, this.scrollTop + (int) this.scrollY / (this.lastY - this.getBottom()) * (this.getScrollWindowHeight() - height));
+    int y = Math.max(this.scrollTop, (int) this.scrollY * (this.getScrollWindowHeight() - height) / this.getMaxScrollY() + this.scrollTop);
+
     context.drawGuiTexture(GuiUtil.sprite("scroller"), x - 6, y, 6, height);
-  }
-
-  private int requiredItems(ItemStack stack) {
-    if (this.inventory == null) {
-      return stack.getCount();
-    }
-
-    // Check if the inventory contains the required count
-    int requiredCount = stack.getCount();
-    for (ItemStack item : this.inventory) {
-      if (ItemUtil.isItemEqual(item, stack)) {
-        requiredCount -= item.getCount();
-      }
-    }
-
-    return requiredCount;
   }
 
   private void setScrollY(double scrollY) {
@@ -384,7 +364,11 @@ public class RecipeWidget extends ClickableWidget {
       return;
     }
 
-    this.scrollY = MathHelper.clamp(scrollY, 0.0, this.lastY - this.getBottom());
+    this.scrollY = MathHelper.clamp(scrollY, 0.0, this.getMaxScrollY());
+  }
+
+  private int getMaxScrollY() {
+    return this.lastY - this.getBottom();
   }
 
   private boolean overflows() {

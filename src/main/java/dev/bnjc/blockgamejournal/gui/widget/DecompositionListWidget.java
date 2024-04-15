@@ -2,6 +2,7 @@ package dev.bnjc.blockgamejournal.gui.widget;
 
 import dev.bnjc.blockgamejournal.journal.DecomposedJournalEntry;
 import dev.bnjc.blockgamejournal.journal.Journal;
+import dev.bnjc.blockgamejournal.journal.recipe.JournalPlayerInventory;
 import dev.bnjc.blockgamejournal.util.GuiUtil;
 import dev.bnjc.blockgamejournal.util.ItemUtil;
 import dev.bnjc.blockgamejournal.util.Profession;
@@ -9,27 +10,20 @@ import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.font.TextRenderer;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.screen.narration.NarrationMessageBuilder;
-import net.minecraft.client.gui.widget.ScrollableWidget;
-import net.minecraft.client.network.ClientPlayerEntity;
-import net.minecraft.entity.Entity;
-import net.minecraft.entity.player.PlayerInventory;
 import net.minecraft.item.ItemStack;
 import net.minecraft.item.Items;
 import net.minecraft.text.MutableText;
-import net.minecraft.text.OrderedText;
 import net.minecraft.text.Text;
 import net.minecraft.util.Formatting;
 
-import java.util.ArrayList;
-import java.util.List;
 import java.util.Map;
 
-public class DecompositionListWidget extends ScrollableWidget {
+public class DecompositionListWidget extends ScrollableViewWidget {
   private final DecomposedJournalEntry entry;
   private final TextRenderer textRenderer;
 
   // TODO: This has common functionality with RecipeWidget, consider refactoring
-  private List<ItemStack> inventory;
+  private JournalPlayerInventory inventory;
   private int lastY;
 
   public DecompositionListWidget(DecomposedJournalEntry entry, int x, int y, int width, int height) {
@@ -39,16 +33,7 @@ public class DecompositionListWidget extends ScrollableWidget {
     this.lastY = y + 2;
 
     this.textRenderer = MinecraftClient.getInstance().textRenderer;
-
-    // Populate inventory
-    Entity entity = MinecraftClient.getInstance().getCameraEntity();
-    if (entity instanceof ClientPlayerEntity player) {
-      PlayerInventory inv = player.getInventory();
-      this.inventory = new ArrayList<>();
-      this.inventory.addAll(inv.main);
-      this.inventory.addAll(inv.armor);
-      this.inventory.addAll(inv.offHand);
-    }
+    this.inventory = JournalPlayerInventory.defaultInventory();
   }
 
   public void updateYInfo(int y, int height) {
@@ -183,11 +168,11 @@ public class DecompositionListWidget extends ScrollableWidget {
       context.drawItem(item, x, this.lastY);
 
       // Render text
-      int requiredCount = this.requiredItems(item);
+      boolean hasEnough = this.inventory.hasEnough(item);
 
       // TODO: Vanilla recipe display?
 
-      MutableText text = Text.literal(requiredCount > 0 ? "✖ " : "✔ ").formatted(requiredCount > 0 ? Formatting.DARK_RED : Formatting.DARK_GREEN);
+      MutableText text = Text.literal(hasEnough ? "✔ " : "✖ ").formatted(hasEnough ? Formatting.DARK_GREEN : Formatting.DARK_RED);
       MutableText itemText = Text.literal(ItemUtil.getName(item)).formatted(Formatting.DARK_GRAY);
       text.append(itemText);
 
@@ -198,21 +183,5 @@ public class DecompositionListWidget extends ScrollableWidget {
       this.lastY = GuiUtil.drawMultiLineText(context, this.textRenderer, x + 20, this.lastY, text, this.getWidth() - 20);
       this.lastY += 6;
     }
-  }
-
-  private int requiredItems(ItemStack stack) {
-    if (this.inventory == null) {
-      return stack.getCount();
-    }
-
-    // Check if the inventory contains the required count
-    int requiredCount = stack.getCount();
-    for (ItemStack item : this.inventory) {
-      if (ItemUtil.isItemEqual(item, stack)) {
-        requiredCount -= item.getCount();
-      }
-    }
-
-    return requiredCount;
   }
 }
