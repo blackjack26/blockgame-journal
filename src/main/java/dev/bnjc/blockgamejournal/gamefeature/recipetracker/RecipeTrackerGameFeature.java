@@ -96,6 +96,7 @@ public class RecipeTrackerGameFeature extends GameFeature {
 
     this.craftingStationHandler.init();
     this.recipePreviewHandler.init();
+    this.profileHandler.init();
 
     Storage.setup();
   }
