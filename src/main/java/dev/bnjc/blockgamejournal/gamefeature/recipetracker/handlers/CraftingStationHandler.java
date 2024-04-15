@@ -13,7 +13,9 @@ import dev.bnjc.blockgamejournal.util.ItemUtil;
 import dev.bnjc.blockgamejournal.util.NbtUtil;
 import lombok.Getter;
 import lombok.Setter;
+import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.DrawContext;
+import net.minecraft.client.network.ClientPlayerEntity;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.item.ItemStack;
 import net.minecraft.nbt.NbtList;
@@ -133,7 +135,15 @@ public class CraftingStationHandler {
   }
 
   private void drawSlot(DrawContext context, Slot slot) {
-    if (this.inventory.isEmpty() || Journal.INSTANCE == null) {
+    if (this.syncId == -1 || this.inventory.isEmpty() || Journal.INSTANCE == null) {
+      return;
+    }
+
+    ClientPlayerEntity player = MinecraftClient.getInstance().player;
+    if (player != null && player.currentScreenHandler.syncId != this.syncId) {
+      this.syncId = -1;
+      this.inventory.clear();
+      this.npcName = "";
       return;
     }
 
