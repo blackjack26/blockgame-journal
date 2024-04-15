@@ -169,7 +169,7 @@ public class RecipeDisplay extends Screen {
     this.decomposeButton.setTooltip(Tooltip.of(Text.translatable("blockgamejournal.decompose_recipe")));
     this.addDrawableChild(this.decomposeButton);
 
-    this.goToPage(0);
+    this.goToPage(this.page);
   }
 
   @Override
