@@ -13,5 +13,9 @@ public class ModConfig extends PartitioningSerializer.GlobalData {
 
   @Getter
   @ConfigEntry.Gui.CollapsibleObject(startExpanded = true)
+  DecompositionConfig decompositionConfig = new DecompositionConfig();
+
+  @Getter
+  @ConfigEntry.Gui.CollapsibleObject(startExpanded = true)
   StorageConfig storageConfig = new StorageConfig();
 }

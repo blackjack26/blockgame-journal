@@ -122,7 +122,7 @@ public class DecomposedJournalEntry {
     for (ItemStack ingredient : entry.getIngredientItems()) {
       String ingredientKey = ItemUtil.getKey(ingredient);
 
-      if (!ItemUtil.isFullyDecomposed(ingredientKey) && !inInventory(ingredient, quantity)) {
+      if (!ItemUtil.isFullyDecomposed(ingredientKey) && (!inInventory(ingredient, quantity) || !BlockgameJournal.getConfig().getDecompositionConfig().partialDecomposition)) {
         List<JournalEntry> entries = Journal.INSTANCE.getEntries().get(ingredientKey);
         if (entries != null && !entries.isEmpty()) {
           // TODO: Handle multiple entries
@@ -135,7 +135,7 @@ public class DecomposedJournalEntry {
           }
         }
 
-        if (ingredientKey.startsWith("minecraft:") && BlockgameJournal.getConfig().getGeneralConfig().decomposeVanillaItems) {
+        if (ingredientKey.startsWith("minecraft:") && BlockgameJournal.getConfig().getDecompositionConfig().decomposeVanillaItems) {
           RecipeEntry<?> recipeEntry = ItemUtil.getRecipe(new Identifier(ingredientKey));
           parseVanillaRecipe(recipeEntry, ingredientKey, decomposed, ingredient.getCount());
           continue;

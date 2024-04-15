@@ -221,7 +221,7 @@ public class RecipeDisplay extends Screen {
           return true;
         }
       }
-      else if (ingredient.startsWith("minecraft:") && !ItemUtil.isFullyDecomposed(ingredient) && BlockgameJournal.getConfig().getGeneralConfig().decomposeVanillaItems) {
+      else if (ingredient.startsWith("minecraft:") && !ItemUtil.isFullyDecomposed(ingredient) && BlockgameJournal.getConfig().getDecompositionConfig().decomposeVanillaItems) {
         Identifier id = new Identifier(ingredient);
         RecipeEntry<?> recipeEntry = ItemUtil.getRecipe(id);
         if (recipeEntry != null && !ItemUtil.isRecursiveRecipe(recipeEntry, entry.getKey())) {
