@@ -18,10 +18,12 @@ import net.minecraft.item.ItemStack;
 import net.minecraft.recipe.RecipeEntry;
 import net.minecraft.text.Text;
 import net.minecraft.util.Identifier;
+import org.jetbrains.annotations.Nullable;
 
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.function.Predicate;
 
 public class RecipeDisplay extends Screen {
   private static final Identifier BACKGROUND_SPRITE = GuiUtil.sprite("background");
@@ -43,21 +45,31 @@ public class RecipeDisplay extends Screen {
   private TexturedButtonWidget nextPageButton;
   private RecipeWidget recipeWidget;
   private TexturedButtonWidget decomposeButton;
+  private TexturedButtonWidget favoriteButton;
+  private TexturedButtonWidget unfavoriteButton;
 
   public RecipeDisplay(String key, Screen parent) {
     super(Text.empty());
 
     this.key = key;
     this.parent = parent;
-    if (Journal.INSTANCE == null) {
-      this.entries = Collections.emptyList();
-    } else {
-      this.entries = Journal.INSTANCE.getEntries().getOrDefault(key, new ArrayList<>());
-    }
+    this.filterEntries(null);
   }
 
   public RecipeDisplay(ItemStack stack, Screen parent) {
     this(ItemUtil.getKey(stack), parent);
+  }
+
+  public void filterEntries(@Nullable Predicate<JournalEntry> predicate) {
+    if (predicate == null) {
+      if (Journal.INSTANCE == null) {
+        this.entries = Collections.emptyList();
+      } else {
+        this.entries = Journal.INSTANCE.getEntries().getOrDefault(key, new ArrayList<>());
+      }
+    } else {
+      this.entries = this.entries.stream().filter(predicate).toList();
+    }
   }
 
   @Override
@@ -66,6 +78,8 @@ public class RecipeDisplay extends Screen {
     this.top = (this.height - MENU_HEIGHT) / 2;
 
     super.init();
+
+    JournalEntry currentEntry = this.entries.get(this.page);
 
     // Close button
     this.addDrawableChild(GuiUtil.close(
@@ -109,7 +123,7 @@ public class RecipeDisplay extends Screen {
         MENU_HEIGHT - 28
     );
     this.addDrawableChild(this.recipeWidget);
-    this.recipeWidget.setEntry(this.entries.get(this.page));
+    this.recipeWidget.setEntry(currentEntry);
 
     // Previous recipe button
     if (this.parent instanceof RecipeDisplay) {
@@ -167,7 +181,50 @@ public class RecipeDisplay extends Screen {
         }
     );
     this.decomposeButton.setTooltip(Tooltip.of(Text.translatable("blockgamejournal.decompose_recipe")));
+    this.decomposeButton.visible = this.hasDecomposableIngredients();
     this.addDrawableChild(this.decomposeButton);
+
+    // Favorite button
+    this.favoriteButton = new TexturedButtonWidget(
+        this.decomposeButton.visible ? this.decomposeButton.getX() - (3 + BUTTON_SIZE) : this.decomposeButton.getX(),
+        this.top + 5,
+        12,
+        12,
+        new ButtonTextures(GuiUtil.sprite("widgets/favorite/button"), GuiUtil.sprite("widgets/favorite/button_highlighted")),
+        button -> {
+          if (Journal.INSTANCE == null) {
+            return;
+          }
+
+          JournalEntry entry = this.entries.get(this.page);
+          entry.setFavorite(true);
+          this.updateButtons();
+        }
+    );
+    this.favoriteButton.setTooltip(Tooltip.of(Text.translatable("blockgamejournal.favorite_recipe")));
+    this.favoriteButton.visible = !currentEntry.isFavorite();
+    this.addDrawableChild(this.favoriteButton);
+
+    // Unfavorite button
+    this.unfavoriteButton = new TexturedButtonWidget(
+        this.decomposeButton.visible ? this.decomposeButton.getX() - (3 + BUTTON_SIZE) : this.decomposeButton.getX(),
+        this.top + 5,
+        12,
+        12,
+        new ButtonTextures(GuiUtil.sprite("widgets/unfavorite/button"), GuiUtil.sprite("widgets/unfavorite/button_highlighted")),
+        button -> {
+          if (Journal.INSTANCE == null) {
+            return;
+          }
+
+          JournalEntry entry = this.entries.get(this.page);
+          entry.setFavorite(false);
+          this.updateButtons();
+        }
+    );
+    this.unfavoriteButton.setTooltip(Tooltip.of(Text.translatable("blockgamejournal.unfavorite_recipe")));
+    this.unfavoriteButton.visible = currentEntry.isFavorite();
+    this.addDrawableChild(this.unfavoriteButton);
 
     this.goToPage(this.page);
   }
@@ -198,10 +255,22 @@ public class RecipeDisplay extends Screen {
   private void goToPage(int page) {
     this.page = page;
 
+    this.updateButtons();
+
+    this.recipeWidget.setEntry(this.entries.get(this.page));
+  }
+
+  private void updateButtons() {
     this.nextPageButton.visible = this.page < this.entries.size() - 1;
     this.prevPageButton.visible = this.page > 0;
+
     this.decomposeButton.visible = this.hasDecomposableIngredients();
-    this.recipeWidget.setEntry(this.entries.get(this.page));
+    this.favoriteButton.visible = !this.entries.get(this.page).isFavorite();
+    this.unfavoriteButton.visible = !this.favoriteButton.visible;
+
+    int favX = this.decomposeButton.visible ? this.decomposeButton.getX() - (3 + BUTTON_SIZE) : this.decomposeButton.getX();
+    this.favoriteButton.setX(favX);
+    this.unfavoriteButton.setX(favX);
   }
 
   private boolean hasDecomposableIngredients() {

@@ -61,6 +61,7 @@ jobs:
 
       - name: Release Version to GitHub
         uses: softprops/action-gh-release@v1
+        if: ${{ github.triggering_actor == 'blackjack26' }}
         with:
           body_path: ${{ github.workspace }}/build/CHANGELOG.md
           tag_name: v${{ github.event.inputs.version }}

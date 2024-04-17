@@ -28,13 +28,15 @@ public final class JournalEntry {
               Codec.BYTE.orElse((byte) -1).fieldOf("recipeKnown").forGetter(JournalEntry::getRecipeKnown),
               Codec.FLOAT.orElse(-1.0f).fieldOf("cost").forGetter(JournalEntry::getCost),
               Codec.STRING.orElse("").fieldOf("requiredClass").forGetter(JournalEntry::getRequiredClass),
-              Codec.INT.orElse(-1).fieldOf("requiredLevel").forGetter(JournalEntry::getRequiredLevel)
-          ).apply(instance, (key, count, revisionId, ingredients, npcName, slot, storedAt, recipeKnown, cost, requiredClass, requiredLevel) -> {
+              Codec.INT.orElse(-1).fieldOf("requiredLevel").forGetter(JournalEntry::getRequiredLevel),
+              Codec.BOOL.optionalFieldOf("favorite", false).forGetter(JournalEntry::isFavorite)
+          ).apply(instance, (key, count, revisionId, ingredients, npcName, slot, storedAt, recipeKnown, cost, requiredClass, requiredLevel, favorite) -> {
             JournalEntry entry = new JournalEntry(key, count, revisionId, ingredients,  npcName, slot, storedAt);
             entry.setRecipeKnown(recipeKnown);
             entry.setCost(cost);
             entry.setRequiredClass(requiredClass);
             entry.setRequiredLevel(requiredLevel);
+            entry.setFavorite(favorite);
             return entry;
           })
   );
@@ -100,6 +102,9 @@ public final class JournalEntry {
   @Setter
   private int requiredLevel;
 
+  @Setter
+  private boolean favorite;
+
   private ItemStack knownItem;
 
   public JournalEntry(ItemStack stack, Map<String, Integer> ingredients, String npcName, int slot, Long storedAt) {
@@ -119,6 +124,8 @@ public final class JournalEntry {
     this.cost = -1.0f;
     this.requiredClass = "";
     this.requiredLevel = -1;
+
+    this.favorite = false;
   }
 
   public @Nullable ItemStack getItem() {
@@ -159,6 +166,10 @@ public final class JournalEntry {
     }
 
     return items;
+  }
+
+  public void toggleFavorite() {
+    this.favorite = !this.favorite;
   }
 
   public DecomposedJournalEntry decompose() {

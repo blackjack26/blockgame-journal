@@ -3,10 +3,12 @@ package dev.bnjc.blockgamejournal.gui.screen;
 import dev.bnjc.blockgamejournal.BlockgameJournal;
 import dev.bnjc.blockgamejournal.gui.widget.*;
 import dev.bnjc.blockgamejournal.journal.Journal;
+import dev.bnjc.blockgamejournal.journal.JournalEntry;
 import dev.bnjc.blockgamejournal.journal.JournalMode;
 import dev.bnjc.blockgamejournal.journal.npc.NPCEntity;
 import dev.bnjc.blockgamejournal.util.GuiUtil;
 import dev.bnjc.blockgamejournal.util.SearchUtil;
+import lombok.Getter;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.screen.Screen;
@@ -49,6 +51,7 @@ public class JournalScreen extends Screen {
   private int left = 0;
   private int top = 0;
 
+  @Getter
   private JournalMode.Type currentMode = JournalMode.Type.ITEM_SEARCH;
 
   private final Screen parent;
@@ -258,7 +261,16 @@ public class JournalScreen extends Screen {
             .sorted(Comparator.comparing(a -> a.getName().getString().toLowerCase(Locale.ROOT)))
             .toList();
       }
-
+    }
+    else if (this.currentMode == JournalMode.Type.FAVORITES) {
+      // Filter journal entry items
+      this.items = Journal.INSTANCE.getEntries().entrySet()
+          .stream()
+          .filter(entry -> entry.getValue().stream().anyMatch(JournalEntry::isFavorite))
+          .map(entry -> Journal.INSTANCE.getKnownItem(entry.getKey()))
+          .filter(Objects::nonNull)
+          .sorted(Comparator.comparing(a -> a.getName().getString().toLowerCase(Locale.ROOT)))
+          .toList();
     }
     else {
       this.items = Collections.emptyList();

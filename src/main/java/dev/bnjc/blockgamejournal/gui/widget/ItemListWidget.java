@@ -3,6 +3,7 @@ package dev.bnjc.blockgamejournal.gui.widget;
 import dev.bnjc.blockgamejournal.gui.screen.JournalScreen;
 import dev.bnjc.blockgamejournal.gui.screen.RecipeDisplay;
 import dev.bnjc.blockgamejournal.journal.Journal;
+import dev.bnjc.blockgamejournal.journal.JournalEntry;
 import dev.bnjc.blockgamejournal.journal.JournalMode;
 import dev.bnjc.blockgamejournal.util.GuiUtil;
 import lombok.Setter;
@@ -81,6 +82,12 @@ public class ItemListWidget extends ClickableWidget {
     if (this.mode == JournalMode.Type.ITEM_SEARCH) {
       // Open RecipeDisplay screen
       MinecraftClient.getInstance().setScreen(new RecipeDisplay(item, this.parent));
+    }
+    else if (this.mode == JournalMode.Type.FAVORITES) {
+      RecipeDisplay recipeDisplay = new RecipeDisplay(item, this.parent);
+      recipeDisplay.filterEntries(JournalEntry::isFavorite);
+
+      MinecraftClient.getInstance().setScreen(recipeDisplay);
     }
     else if (this.mode == JournalMode.Type.NPC_SEARCH) {
       if (item.getItem() instanceof PlayerHeadItem) {
