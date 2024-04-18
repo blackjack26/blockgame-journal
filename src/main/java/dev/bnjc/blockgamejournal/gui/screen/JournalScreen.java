@@ -195,6 +195,10 @@ public class JournalScreen extends Screen {
     Text titleText = this.title;
     if (JournalScreen.selectedNpc != null) {
       titleText = Text.translatable("blockgamejournal.recipe_journal.npc", JournalScreen.selectedNpc.getNpcName().name());
+    } else if (this.currentMode == JournalMode.Type.FAVORITES) {
+      titleText = Text.translatable("blockgamejournal.recipe_journal.favorites");
+    } else if (this.currentMode == JournalMode.Type.NPC_SEARCH) {
+      titleText = Text.translatable("blockgamejournal.recipe_journal.by_npc");
     }
     context.drawText(textRenderer, titleText, this.left + TITLE_LEFT, this.top + TITLE_TOP, 0x404040, false);
   }
@@ -224,6 +228,7 @@ public class JournalScreen extends Screen {
 
     this.updateItems(null);
     this.closeButton.visible = npc != null;
+    this.search.setFocused(true);
   }
 
   private void updateItems(String filter) {

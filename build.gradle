@@ -23,6 +23,11 @@ ext {
         return type
     }
     releaseChangelog = {
+        // Don't run if lastTag is null
+        if (lastTag == null) {
+            return "No Changelog Available"
+        }
+
         def changes = StringBuilder.getDeclaredConstructor().newInstance();
         def commits = "git log --max-count=${project.changelog_max_commit_search} --pretty=format:\"%b\" $lastTag..$newTag".execute()
         println "Last version: $lastTag"

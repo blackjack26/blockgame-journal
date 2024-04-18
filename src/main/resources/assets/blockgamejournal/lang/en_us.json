@@ -11,6 +11,8 @@
   "blockgamejournal.prev_recipe": "Previous Recipe",
   "blockgamejournal.recipe_journal": "Recipe Journal",
   "blockgamejournal.recipe_journal.npc": "%s's Recipes",
+  "blockgamejournal.recipe_journal.favorites": "Favorite Recipes",
+  "blockgamejournal.recipe_journal.by_npc": "Recipes by NPC",
   "blockgamejournal.recipe_journal.no_journal": "Invalid Journal",
   "blockgamejournal.remove_recipe": "Remove Recipe",
   "blockgamejournal.search_hint": "Search...",
