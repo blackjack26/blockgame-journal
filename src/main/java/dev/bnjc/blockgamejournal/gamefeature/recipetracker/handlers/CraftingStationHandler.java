@@ -5,6 +5,7 @@ import dev.bnjc.blockgamejournal.gamefeature.recipetracker.RecipeTrackerGameFeat
 import dev.bnjc.blockgamejournal.gamefeature.recipetracker.station.CraftingStationItem;
 import dev.bnjc.blockgamejournal.journal.Journal;
 import dev.bnjc.blockgamejournal.journal.JournalEntry;
+import dev.bnjc.blockgamejournal.journal.npc.NPCEntry;
 import dev.bnjc.blockgamejournal.listener.interaction.SlotClickedListener;
 import dev.bnjc.blockgamejournal.listener.screen.DrawSlotListener;
 import dev.bnjc.blockgamejournal.listener.screen.ScreenOpenedListener;
@@ -70,16 +71,16 @@ public class CraftingStationHandler {
 
     // Look for screen name "Some Name (#page#/#max#)"
     Matcher matcher = Pattern.compile("^([\\w\\s]+)\\s\\(\\d+/\\d+\\)").matcher(screenName);
+    PlayerEntity lastAttackedPlayer = this.gameFeature.getLastAttackedPlayer();
     if (matcher.find() ||
-        (this.gameFeature.getLastAttackedPlayer() != null &&
-         screenName.equals(this.gameFeature.getLastAttackedPlayer().getEntityName()))) {
+        (lastAttackedPlayer != null && screenName.equals(lastAttackedPlayer.getEntityName()))) {
       this.syncId = packet.getSyncId();
 
-      if (this.gameFeature.getLastAttackedPlayer() != null) {
-        this.npcName = this.gameFeature.getLastAttackedPlayer().getEntityName();
+      if (lastAttackedPlayer != null) {
+        this.npcName = lastAttackedPlayer.getEntityName();
 
         if (Journal.INSTANCE != null) {
-          Journal.INSTANCE.getKnownNPCs().put(this.npcName, this.gameFeature.getLastAttackedPlayer().getGameProfile());
+          Journal.INSTANCE.getKnownNPCs().put(this.npcName, NPCEntry.of(lastAttackedPlayer));
         }
       } else {
         this.npcName = matcher.group(1);

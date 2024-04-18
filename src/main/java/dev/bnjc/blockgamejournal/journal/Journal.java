@@ -4,13 +4,13 @@ import com.mojang.authlib.GameProfile;
 import com.mojang.serialization.Codec;
 import dev.bnjc.blockgamejournal.BlockgameJournal;
 import dev.bnjc.blockgamejournal.journal.metadata.Metadata;
+import dev.bnjc.blockgamejournal.journal.npc.NPCEntry;
 import dev.bnjc.blockgamejournal.journal.npc.NPCNames;
 import dev.bnjc.blockgamejournal.storage.Storage;
 import dev.bnjc.blockgamejournal.storage.backend.FileBasedBackend;
 import dev.bnjc.blockgamejournal.util.ItemUtil;
 import lombok.Getter;
 import lombok.Setter;
-import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.item.ItemStack;
 import net.minecraft.item.Items;
 import net.minecraft.item.PlayerHeadItem;
@@ -45,12 +45,16 @@ public class Journal {
       .unboundedMap(Codec.STRING, ItemStack.CODEC)
       .xmap(HashMap::new, Function.identity());
 
-  public static final Codec<Map<String, GameProfile>> KNOWN_NPCS_CODEC = Codec
+  public static final Codec<Map<String, NPCEntry>> KNOWN_NPCS_CODEC = Codec
+      .unboundedMap(Codec.STRING, NPCEntry.CODEC)
+      .xmap(HashMap::new, Function.identity());
+
+  @Deprecated(since = "0.2.0-alpha", forRemoval = true)
+  public static final Codec<Map<String, GameProfile>> LEGACY_NPCS_CODE = Codec
       .unboundedMap(Codec.STRING, NbtCompound.CODEC.xmap(
           NbtHelper::toGameProfile,
           gameProfile -> NbtHelper.writeGameProfile(new NbtCompound(), gameProfile)
-      ))
-      .xmap(HashMap::new, Function.identity());
+      ));
 
   @Nullable
   public static Journal INSTANCE = null;
@@ -92,7 +96,7 @@ public class Journal {
   private final Map<String, ItemStack> knownItems;
 
   @Getter
-  private final Map<String, GameProfile> knownNPCs;
+  private final Map<String, NPCEntry> knownNPCs;
 
   @Getter
   @Setter
@@ -102,7 +106,7 @@ public class Journal {
       Metadata metadata,
       Map<String, ArrayList<JournalEntry>> entries,
       Map<String, ItemStack> knownItems,
-      Map<String, GameProfile> knownNPCs
+      Map<String, NPCEntry> knownNPCs
   ) {
     this.metadata = metadata;
     this.entries = entries;
@@ -149,10 +153,12 @@ public class Journal {
   }
 
   public @Nullable ItemStack getKnownNpcItem(String npcName) {
-    GameProfile gameProfile = knownNPCs.get(npcName);
-    if (gameProfile == null) {
+    NPCEntry npcEntry = knownNPCs.get(npcName);
+    if (npcEntry == null) {
       return null;
     }
+
+    GameProfile gameProfile = npcEntry.getGameProfile();
 
     ItemStack stack = new ItemStack(Items.PLAYER_HEAD);
     stack.setSubNbt(PlayerHeadItem.SKULL_OWNER_KEY, NbtHelper.writeGameProfile(new NbtCompound(), gameProfile));

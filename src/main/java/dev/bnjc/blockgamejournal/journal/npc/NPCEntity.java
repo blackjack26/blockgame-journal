@@ -17,11 +17,16 @@ public class NPCEntity extends AbstractClientPlayerEntity {
    */
   @Getter
   private final String npcWorldName;
+
+  @Getter
+  private final NPCEntry npcEntry;
+
   private PlayerListEntry playerListEntry;
 
   public NPCEntity(ClientWorld world, String npcWorldName) {
-    super(world, Journal.INSTANCE.getKnownNPCs().get(npcWorldName));
+    super(world, Journal.INSTANCE.getKnownNPCs().get(npcWorldName).getGameProfile());
 
+    this.npcEntry = Journal.INSTANCE.getKnownNPCs().get(npcWorldName);
     this.npcName = NPCNames.get(npcWorldName);
     this.npcWorldName = npcWorldName;
 

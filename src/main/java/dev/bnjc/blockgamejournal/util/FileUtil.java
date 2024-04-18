@@ -66,4 +66,14 @@ public class FileUtil {
       LOGGER.error("[Blockgame Journal] Error moving file from {} to {}", from, to, ex);
     }
   }
+
+  public static boolean deleteIfExists(Path to) {
+    try {
+      Files.deleteIfExists(to);
+      return true;
+    } catch (IOException ex) {
+      LOGGER.error("[Blockgame Journal] Error deleting file {}", to, ex);
+      return false;
+    }
+  }
 }

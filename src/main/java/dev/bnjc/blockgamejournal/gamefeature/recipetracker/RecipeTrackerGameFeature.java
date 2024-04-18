@@ -1,5 +1,7 @@
 package dev.bnjc.blockgamejournal.gamefeature.recipetracker;
 
+import com.mojang.blaze3d.platform.GlStateManager;
+import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.brigadier.CommandDispatcher;
 import dev.bnjc.blockgamejournal.BlockgameJournal;
 import dev.bnjc.blockgamejournal.client.BlockgameJournalClient;
@@ -9,8 +11,10 @@ import dev.bnjc.blockgamejournal.gamefeature.recipetracker.handlers.ProfileHandl
 import dev.bnjc.blockgamejournal.gamefeature.recipetracker.handlers.RecipePreviewHandler;
 import dev.bnjc.blockgamejournal.gui.screen.JournalScreen;
 import dev.bnjc.blockgamejournal.journal.Journal;
+import dev.bnjc.blockgamejournal.journal.npc.NPCEntry;
 import dev.bnjc.blockgamejournal.listener.chat.ReceiveChatListener;
 import dev.bnjc.blockgamejournal.listener.interaction.EntityAttackedListener;
+import dev.bnjc.blockgamejournal.listener.renderer.PostRenderListener;
 import dev.bnjc.blockgamejournal.storage.Storage;
 import lombok.Getter;
 import net.fabricmc.fabric.api.client.command.v2.ClientCommandManager;
@@ -23,6 +27,7 @@ import net.fabricmc.fabric.api.client.screen.v1.ScreenEvents;
 import net.fabricmc.fabric.api.client.screen.v1.ScreenKeyboardEvents;
 import net.fabricmc.fabric.api.networking.v1.PacketSender;
 import net.minecraft.client.MinecraftClient;
+import net.minecraft.client.font.TextRenderer;
 import net.minecraft.client.gui.screen.Screen;
 import net.minecraft.client.gui.screen.ingame.AbstractInventoryScreen;
 import net.minecraft.client.gui.screen.ingame.CreativeInventoryScreen;
@@ -30,7 +35,9 @@ import net.minecraft.client.gui.screen.recipebook.RecipeBookProvider;
 import net.minecraft.client.gui.widget.TextFieldWidget;
 import net.minecraft.client.network.ClientPlayNetworkHandler;
 import net.minecraft.client.option.KeyBinding;
+import net.minecraft.client.render.*;
 import net.minecraft.client.util.InputUtil;
+import net.minecraft.client.util.math.MatrixStack;
 import net.minecraft.command.CommandRegistryAccess;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.player.PlayerEntity;
@@ -39,9 +46,15 @@ import net.minecraft.text.MutableText;
 import net.minecraft.text.Text;
 import net.minecraft.util.ActionResult;
 import net.minecraft.util.Formatting;
+import net.minecraft.util.math.Box;
+import net.minecraft.util.math.RotationAxis;
+import net.minecraft.util.math.Vec3d;
 import org.jetbrains.annotations.Nullable;
+import org.joml.Matrix4f;
 import org.slf4j.Logger;
 
+import java.util.Map;
+import java.util.Optional;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -87,6 +100,7 @@ public class RecipeTrackerGameFeature extends GameFeature {
     ClientCommandRegistrationCallback.EVENT.register(this::registerCommand);
     ScreenEvents.AFTER_INIT.register(this::handleScreenInit);
     ReceiveChatListener.EVENT.register(this::handleChatMessage);
+    PostRenderListener.EVENT.register(this::handlePostRender);
 
     ClientTickEvents.START_WORLD_TICK.register((client) -> {
       if (Journal.INSTANCE != null) {
@@ -256,5 +270,172 @@ public class RecipeTrackerGameFeature extends GameFeature {
     return ActionResult.PASS;
   }
 
+  // TODO: Move into another game feature
+  private void handlePostRender(float tickDelta, long limitTime, MatrixStack matrices, boolean withDepth, boolean withoutDepth) {
+    if (Journal.INSTANCE == null) {
+      return;
+    }
+
+    Map<String, NPCEntry> knownNPCs = Journal.INSTANCE.getKnownNPCs();
+    if (knownNPCs.isEmpty()) {
+      return;
+    }
+
+    // TODO: Sort waypoints
+    Entity cameraEntity = this.getMinecraftClient().getCameraEntity();
+    if (cameraEntity == null) {
+      return;
+    }
+
+    double renderPosX = cameraEntity.getX();
+    double renderPosY = cameraEntity.getY();
+    double renderPosZ = cameraEntity.getZ();
+
+    RenderSystem.enableCull();
+
+    // TODO: If enabled
+    RenderSystem.enableBlend();
+    RenderSystem.blendFuncSeparate(GlStateManager.SrcFactor.SRC_ALPHA, GlStateManager.DstFactor.ONE_MINUS_SRC_ALPHA,
+        GlStateManager.SrcFactor.ONE, GlStateManager.DstFactor.ONE_MINUS_SRC_ALPHA);
+
+    for (NPCEntry entry : knownNPCs.values()) {
+      if (entry.getPosition() == null || !entry.isLocating()) {
+        continue;
+      }
+
+      double x = entry.getX();
+      double y = entry.getY();
+      double z = entry.getZ();
+
+      double distance = Math.sqrt(entry.getDistanceSqToEntity(cameraEntity));
+
+      int maxDistance = 1000; // TODO: Configurable
+      if ((distance < maxDistance || maxDistance < 0 /* || entry == this.highlightedWaypoint */) && !this.getMinecraftClient().options.hudHidden) {
+        boolean isPointedAt = this.isPointedAt(entry, distance, cameraEntity, tickDelta);
+        String label = entry.getName();
+        this.renderLabel(matrices, entry, distance, isPointedAt, label, x - renderPosX, y - renderPosY - 0.5, z - renderPosZ, 64, withDepth, withoutDepth);
+      }
+    }
+
+    // TODO: Highlighted waypoint?
+
+    RenderSystem.enableDepthTest();
+    RenderSystem.depthMask(true);
+    RenderSystem.disableBlend();
+  }
   // endregion Handlers
+
+  // region Helpers
+  private boolean isPointedAt(NPCEntry entry, double distance, Entity cameraEntity, float tickDelta) {
+    Vec3d cameraPos = cameraEntity.getCameraPosVec(tickDelta);
+    double degrees = 5.0 + Math.min(5.0 / distance, 5.0);
+    double angle = degrees * 0.174533;
+    double size = Math.sin(angle) * distance;
+    Vec3d cameraPosPlusDirection = cameraEntity.getRotationVec(tickDelta);
+    Vec3d cameraPosPlusDirectionTimesDistance = cameraPos.add(cameraPosPlusDirection.x * distance, cameraPosPlusDirection.y * distance, cameraPosPlusDirection.z * distance);
+    Box axisalignedbb = new Box((entry.getX() + 0.5f) - size, (entry.getY() + 1.5f) - size, (entry.getZ() + 0.5f) - size, (entry.getX() + 0.5f) + size, (entry.getY() + 1.5f) + size, (entry.getZ() + 0.5f) + size);
+    Optional<Vec3d> raytaceresult = axisalignedbb.raycast(cameraPos, cameraPosPlusDirectionTimesDistance);
+    if (axisalignedbb.contains(cameraPos)) {
+      return distance >= 1.0;
+    } else {
+      return raytaceresult.isPresent();
+    }
+  }
+
+  private void renderLabel(MatrixStack matrices, NPCEntry entry, double distance, boolean isPointedAt, String name,
+                           double baseX, double baseY, double baseZ, int par9, boolean withDepth, boolean withoutDepth) {
+    name = name + " (" + (int) distance + "m)";
+
+    double maxDistance = this.getMinecraftClient().options.getSimulationDistance().getValue() * 16.0 * 0.99;
+    double adjustedDistance = distance;
+    if (distance > maxDistance) {
+      baseX = baseX / distance * maxDistance;
+      baseY = baseY / distance * maxDistance;
+      baseZ = baseZ / distance * maxDistance;
+      adjustedDistance = maxDistance;
+    }
+
+    float var14 = ((float) adjustedDistance * 0.1f + 1.0f) * 0.0266f;
+    matrices.push();
+    matrices.translate((float) baseX + 0.5f, (float) baseY + 0.5f, (float) baseZ + 0.5f);
+    matrices.multiply(RotationAxis.POSITIVE_Y.rotationDegrees(-this.getMinecraftClient().getEntityRenderDispatcher().camera.getYaw()));
+    matrices.multiply(RotationAxis.POSITIVE_X.rotationDegrees(this.getMinecraftClient().getEntityRenderDispatcher().camera.getPitch()));
+    matrices.scale(-var14, -var14, var14);
+
+    Matrix4f matrix4f = matrices.peek().getPositionMatrix();
+    Tessellator tessellator = Tessellator.getInstance();
+    BufferBuilder vertexBuffer = tessellator.getBuffer();
+    float fade = distance > 5.0 ? 1.0f : (float) distance / 5.0f;
+    float width = 10.0f;
+    float r = 1.0f;
+    float g = 0.0f;
+    float b = 0.0f;
+
+    // TODO: Icon?
+
+    TextRenderer textRenderer = this.getMinecraftClient().textRenderer;
+    if (isPointedAt && textRenderer != null) {
+      byte elevateBy = -19;
+      RenderSystem.enablePolygonOffset();
+      int halfStringWidth= textRenderer.getWidth(name) / 2;
+      RenderSystem.setShader(GameRenderer::getPositionColorProgram);
+
+      if (withDepth) {
+        RenderSystem.depthMask(distance < maxDistance);
+        RenderSystem.enableDepthTest();
+        RenderSystem.polygonOffset(1.0f, 7.0f);
+        vertexBuffer.begin(VertexFormat.DrawMode.QUADS, VertexFormats.POSITION_COLOR);
+        vertexBuffer.vertex(matrix4f, (-halfStringWidth - 2), (-2 + elevateBy), 0.0F).color(r, g, b, 0.6F * fade).next();
+        vertexBuffer.vertex(matrix4f, (-halfStringWidth - 2), (9 + elevateBy), 0.0F).color(r, g, b, 0.6F * fade).next();
+        vertexBuffer.vertex(matrix4f, (halfStringWidth + 2), (9 + elevateBy), 0.0F).color(r, g, b, 0.6F * fade).next();
+        vertexBuffer.vertex(matrix4f, (halfStringWidth + 2), (-2 + elevateBy), 0.0F).color(r, g, b, 0.6F * fade).next();
+        tessellator.draw();
+
+        RenderSystem.polygonOffset(1.0f, 5.0f);
+        vertexBuffer.begin(VertexFormat.DrawMode.QUADS, VertexFormats.POSITION_COLOR);
+        vertexBuffer.vertex(matrix4f, (-halfStringWidth - 1), (-1 + elevateBy), 0.0F).color(0.0F, 0.0F, 0.0F, 0.6F * fade).next();
+        vertexBuffer.vertex(matrix4f, (-halfStringWidth - 1), (8 + elevateBy), 0.0F).color(0.0F, 0.0F, 0.0F, 0.6F * fade).next();
+        vertexBuffer.vertex(matrix4f, (halfStringWidth + 1), (8 + elevateBy), 0.0F).color(0.0F, 0.0F, 0.0F, 0.6F * fade).next();
+        vertexBuffer.vertex(matrix4f, (halfStringWidth + 1), (-1 + elevateBy), 0.0F).color(0.0F, 0.0F, 0.0F, 0.6F * fade).next();
+        tessellator.draw();
+      }
+
+      if (withoutDepth) {
+        RenderSystem.disableDepthTest();
+        RenderSystem.depthMask(false);
+        RenderSystem.polygonOffset(1.0f, 11.0f);
+        vertexBuffer.begin(VertexFormat.DrawMode.QUADS, VertexFormats.POSITION_COLOR);
+        vertexBuffer.vertex(matrix4f, (-halfStringWidth - 2), (-2 + elevateBy), 0.0F).color(r, g, b, 0.15F * fade).next();
+        vertexBuffer.vertex(matrix4f, (-halfStringWidth - 2), (9 + elevateBy), 0.0F).color(r, g, b, 0.15F * fade).next();
+        vertexBuffer.vertex(matrix4f, (halfStringWidth + 2), (9 + elevateBy), 0.0F).color(r, g, b, 0.15F * fade).next();
+        vertexBuffer.vertex(matrix4f, (halfStringWidth + 2), (-2 + elevateBy), 0.0F).color(r, g, b, 0.15F * fade).next();
+        tessellator.draw();
+
+        RenderSystem.polygonOffset(1.0f, 9.0f);
+        vertexBuffer.begin(VertexFormat.DrawMode.QUADS, VertexFormats.POSITION_COLOR);
+        vertexBuffer.vertex(matrix4f, (-halfStringWidth - 1), (-1 + elevateBy), 0.0F).color(0.0F, 0.0F, 0.0F, 0.15F * fade).next();
+        vertexBuffer.vertex(matrix4f, (-halfStringWidth - 1), (8 + elevateBy), 0.0F).color(0.0F, 0.0F, 0.0F, 0.15F * fade).next();
+        vertexBuffer.vertex(matrix4f, (halfStringWidth + 1), (8 + elevateBy), 0.0F).color(0.0F, 0.0F, 0.0F, 0.15F * fade).next();
+        vertexBuffer.vertex(matrix4f, (halfStringWidth + 1), (-1 + elevateBy), 0.0F).color(0.0F, 0.0F, 0.0F, 0.15F * fade).next();
+        tessellator.draw();
+      }
+
+      RenderSystem.disablePolygonOffset();
+      RenderSystem.depthMask(false);
+
+      VertexConsumerProvider.Immediate vertexConsumerProvider = this.getMinecraftClient().getBufferBuilders().getEffectVertexConsumers();
+      if (withoutDepth) {
+        int textColor = (int) (255.0f * fade) << 24 | 0xFFFFFF;
+        RenderSystem.disableDepthTest();
+        textRenderer.draw(Text.literal(name), (-textRenderer.getWidth(name) / 2f), elevateBy, textColor, false, matrix4f, vertexConsumerProvider, TextRenderer.TextLayerType.SEE_THROUGH, 0, 15728880);
+        vertexConsumerProvider.draw();
+      }
+
+      RenderSystem.enableBlend();
+    }
+
+    RenderSystem.setShaderColor(1.0f, 1.0f, 1.0f, 1.0f);
+    matrices.pop();
+  }
+  // endregion Helpers
 }

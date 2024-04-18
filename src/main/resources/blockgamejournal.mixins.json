@@ -7,7 +7,8 @@
   "client": [
     "network.ClientPlayNetworkHandlerMixin",
     "network.ClientPlayerInteractionManagerMixin",
-    "gui.screen.HandledScreenMixin"
+    "gui.screen.HandledScreenMixin",
+    "renderer.WorldRendererMixin"
   ],
   "injectors": {
     "defaultRequire": 1

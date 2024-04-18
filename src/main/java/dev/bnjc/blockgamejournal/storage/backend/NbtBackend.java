@@ -5,6 +5,7 @@ import dev.bnjc.blockgamejournal.BlockgameJournal;
 import dev.bnjc.blockgamejournal.journal.Journal;
 import dev.bnjc.blockgamejournal.journal.JournalEntry;
 import dev.bnjc.blockgamejournal.journal.metadata.Metadata;
+import dev.bnjc.blockgamejournal.journal.npc.NPCEntry;
 import dev.bnjc.blockgamejournal.util.FileUtil;
 import dev.bnjc.blockgamejournal.util.Timer;
 import net.minecraft.item.ItemStack;
@@ -29,6 +30,17 @@ public class NbtBackend extends FileBasedBackend {
     var items = this.loadKnownItems();
     var npcs = this.loadKnownNPCs();
 
+    if (npcs.isEmpty()) {
+      // Check for legacy NPCs
+      var legacyNPCs = this.loadLegacyNPCs();
+      if (!legacyNPCs.isEmpty()) {
+        LOGGER.info("[Blockgame Journal] Migrating legacy NPCs to new format");
+        for (var entry : legacyNPCs.entrySet()) {
+          npcs.put(entry.getKey(), NPCEntry.fromLegacy(entry.getKey(), entry.getValue()));
+        }
+      }
+    }
+
     return new Journal(metadata, entries, items, npcs);
   }
 
@@ -45,6 +57,10 @@ public class NbtBackend extends FileBasedBackend {
     boolean result = FileUtil.saveToNbt(journal.getEntries(), Journal.JOURNAL_CODEC, STORAGE_DIR.resolve(JOURNAL_NAME + extension()));
     result &= FileUtil.saveToNbt(journal.getKnownItems(), Journal.KNOWN_ITEMS_CODEC, STORAGE_DIR.resolve(KNOWN_ITEMS_NAME + extension()));
     result &= FileUtil.saveToNbt(journal.getKnownNPCs(), Journal.KNOWN_NPCS_CODEC, STORAGE_DIR.resolve(NPC_CACHE_NAME + extension()));
+
+    // Remove legacy NPC cache if it exists
+    this.removeLegacyNPCs();
+
     return result;
   }
 
@@ -78,7 +94,7 @@ public class NbtBackend extends FileBasedBackend {
     return new HashMap<>();
   }
 
-  private Map<String, GameProfile> loadKnownNPCs() {
+  private Map<String, NPCEntry> loadKnownNPCs() {
     // Load cached NPCs if they exist
     Path npcPath = STORAGE_DIR.resolve(NPC_CACHE_NAME + extension());
     var npcResult = Timer.time(() -> FileUtil.loadFromNbt(Journal.KNOWN_NPCS_CODEC, npcPath));
@@ -87,7 +103,26 @@ public class NbtBackend extends FileBasedBackend {
       return npcResult.getFirst().get();
     }
 
-    LOGGER.warn("[Blockgame Journal] Failed to load cached NPCs from {}", npcPath);
     return new HashMap<>();
+  }
+
+  @Deprecated(since = "0.2.0-alpha", forRemoval = true)
+  private Map<String, GameProfile> loadLegacyNPCs() {
+    // Load cached NPCs if they exist
+    Path npcPath = STORAGE_DIR.resolve(NPC_LEGACY_CACHE_NAME + extension());
+    var npcResult = Timer.time(() -> FileUtil.loadFromNbt(Journal.LEGACY_NPCS_CODE, npcPath));
+    if (npcResult.getFirst().isPresent()) {
+      LOGGER.info("[Blockgame Journal] Loaded NPCs {} in {}ns", npcPath, npcResult.getSecond());
+      return npcResult.getFirst().get();
+    }
+
+    return new HashMap<>();
+  }
+
+  private void removeLegacyNPCs() {
+    Path legacyNpcPath = STORAGE_DIR.resolve(NPC_LEGACY_CACHE_NAME + extension());
+    if (FileUtil.deleteIfExists(legacyNpcPath)) {
+      LOGGER.info("[Blockgame Journal] Removed legacy NPC cache");
+    }
   }
 }

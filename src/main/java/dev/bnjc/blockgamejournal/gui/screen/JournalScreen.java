@@ -136,6 +136,10 @@ public class JournalScreen extends Screen {
     this.closeButton.visible = JournalScreen.selectedNpc != null;
     this.addDrawableChild(this.closeButton);
 
+    // NPC Widget
+    this.npcWidget = new NPCWidget(JournalScreen.selectedNpc, this.left + MENU_WIDTH + 4, this.top, 68, 74);
+    this.addDrawableChild(this.npcWidget);
+
     ///// Mode Buttons
     Map<JournalMode.Type, ModeButton> buttons = new HashMap<>();
 
@@ -181,10 +185,6 @@ public class JournalScreen extends Screen {
     if (buttons.containsKey(this.currentMode)) {
       buttons.get(this.currentMode).setHighlighted(true);
     }
-
-    // NPC Widget
-    this.npcWidget = new NPCWidget(JournalScreen.selectedNpc, this.left + MENU_WIDTH + 4, this.top, 68, 74);
-    this.addDrawable(this.npcWidget);
   }
 
   @Override
