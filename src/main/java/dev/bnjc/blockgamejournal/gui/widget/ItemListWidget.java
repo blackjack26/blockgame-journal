@@ -5,7 +5,9 @@ import dev.bnjc.blockgamejournal.gui.screen.RecipeDisplay;
 import dev.bnjc.blockgamejournal.journal.Journal;
 import dev.bnjc.blockgamejournal.journal.JournalEntry;
 import dev.bnjc.blockgamejournal.journal.JournalMode;
+import dev.bnjc.blockgamejournal.journal.npc.NPCItemStack;
 import dev.bnjc.blockgamejournal.util.GuiUtil;
+import dev.bnjc.blockgamejournal.util.ItemUtil;
 import lombok.Setter;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.DrawContext;
@@ -17,7 +19,9 @@ import net.minecraft.item.PlayerHeadItem;
 import net.minecraft.text.Text;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.math.MathHelper;
+import org.jetbrains.annotations.Nullable;
 
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
@@ -31,6 +35,8 @@ public class ItemListWidget extends ClickableWidget {
   private final int gridHeight;
   private List<ItemStack> items = Collections.emptyList();
   private int offset = 0;
+
+  private @Nullable ItemStack hoveredItem = null;
 
   @Setter
   private JournalMode.Type mode = JournalMode.Type.ITEM_SEARCH;
@@ -79,25 +85,64 @@ public class ItemListWidget extends ClickableWidget {
 
     ItemStack item = items.get(index);
 
-    if (this.mode == JournalMode.Type.ITEM_SEARCH) {
-      // Open RecipeDisplay screen
-      MinecraftClient.getInstance().setScreen(new RecipeDisplay(item, this.parent));
-    }
-    else if (this.mode == JournalMode.Type.FAVORITES) {
-      RecipeDisplay recipeDisplay = new RecipeDisplay(item, this.parent);
-      recipeDisplay.filterEntries(JournalEntry::isFavorite);
-
-      MinecraftClient.getInstance().setScreen(recipeDisplay);
-    }
-    else if (this.mode == JournalMode.Type.NPC_SEARCH) {
-      if (item.getItem() instanceof PlayerHeadItem) {
-        if (this.parent instanceof JournalScreen journalScreen && item.hasNbt()) {
-          journalScreen.setSelectedNpc(item.getNbt().getString(Journal.NPC_NAME_KEY));
-        }
-      } else {
+    if (item != null) {
+      if (this.mode == JournalMode.Type.ITEM_SEARCH) {
+        // Open RecipeDisplay screen
         MinecraftClient.getInstance().setScreen(new RecipeDisplay(item, this.parent));
+      } else if (this.mode == JournalMode.Type.FAVORITES) {
+        RecipeDisplay recipeDisplay = new RecipeDisplay(item, this.parent);
+        recipeDisplay.filterEntries(JournalEntry::isFavorite);
+
+        MinecraftClient.getInstance().setScreen(recipeDisplay);
+      } else if (this.mode == JournalMode.Type.NPC_SEARCH) {
+        if (item.getItem() instanceof PlayerHeadItem) {
+          if (this.parent instanceof JournalScreen journalScreen && item.hasNbt()) {
+            journalScreen.setSelectedNpc(item.getNbt().getString(Journal.NPC_NAME_KEY));
+          }
+        } else {
+          MinecraftClient.getInstance().setScreen(new RecipeDisplay(item, this.parent));
+        }
       }
     }
+  }
+
+  @Override
+  public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
+    if (this.hoveredItem != null && Journal.INSTANCE != null) {
+      if (this.mode == JournalMode.Type.NPC_SEARCH && this.hoveredItem.getItem() instanceof PlayerHeadItem) {
+        String npcName = this.hoveredItem.getNbt().getString(Journal.NPC_NAME_KEY);
+        Journal.INSTANCE.getKnownNpc(npcName).ifPresent(npc -> {
+          if (keyCode == 65) {
+            // If NPC is locating and the A key is pressed, stop locating
+            if (npc.isLocating()) {
+              npc.setLocating(false);
+              NPCItemStack.updateStack(npcName, this.hoveredItem, npc);
+            }
+            // If NPC is not locating and the A key is pressed, start locating
+            else if (npc.getPosition() != null) {
+              npc.setLocating(true);
+              NPCItemStack.updateStack(npcName, this.hoveredItem, npc);
+            }
+          }
+        });
+      }
+      else if (this.mode == JournalMode.Type.FAVORITES) {
+        if (keyCode == 65) {
+          if (Journal.INSTANCE.hasJournalEntry(this.hoveredItem)) {
+            List<JournalEntry> entries = Journal.INSTANCE.getEntries().getOrDefault(ItemUtil.getKey(this.hoveredItem), new ArrayList<>());
+            for (JournalEntry entry : entries) {
+              entry.setFavorite(false);
+            }
+
+            if (this.parent instanceof JournalScreen journalScreen) {
+              journalScreen.refreshItems();
+            }
+          }
+        }
+      }
+    }
+
+    return super.keyPressed(keyCode, scanCode, modifiers);
   }
 
   @Override
@@ -120,6 +165,18 @@ public class ItemListWidget extends ClickableWidget {
       int y = this.getY() + GRID_SLOT_SIZE * (i / this.gridWidth);
       if (i < items.size()) {
         ItemStack item = items.get(i);
+
+        if (this.mode == JournalMode.Type.NPC_SEARCH && Journal.INSTANCE != null) {
+          if (item.getItem() instanceof PlayerHeadItem) {
+            String npcName = item.getNbt().getString(Journal.NPC_NAME_KEY);
+            Journal.INSTANCE.getKnownNpc(npcName).ifPresent(npc -> {
+              if (npc.isLocating()) {
+                context.fill(x + 1, y + 1, x + GRID_SLOT_SIZE - 1, y + GRID_SLOT_SIZE - 1, 0x80_AA00AA);
+              }
+            });
+          }
+        }
+
         context.drawItem(item, x + 1, y + 1);
       }
     }
@@ -128,17 +185,20 @@ public class ItemListWidget extends ClickableWidget {
   private void renderTooltip(DrawContext context, int mouseX, int mouseY) {
     List<ItemStack> items = this.getOffsetItems();
     if (!this.isHovered()) {
+      this.hoveredItem = null;
       return;
     }
 
     int x = (mouseX - this.getX()) / GRID_SLOT_SIZE;
     int y = (mouseY - this.getY()) / GRID_SLOT_SIZE;
     if (x < 0 || x > this.gridWidth || y < 0 || y > this.gridHeight) {
+      this.hoveredItem = null;
       return;
     }
 
     int index = (y * this.gridWidth) + x;
     if (index >= items.size()) {
+      this.hoveredItem = null;
       return;
     }
 
@@ -146,12 +206,12 @@ public class ItemListWidget extends ClickableWidget {
     int slotY = this.getY() + y * GRID_SLOT_SIZE;
     context.fill(slotX + 1, slotY + 1, slotX + GRID_SLOT_SIZE - 1, slotY + GRID_SLOT_SIZE - 1, 0x80_FFFFFF);
 
-    if (!this.hideTooltip) {
-      ItemStack stack = items.get(index);
+    this.hoveredItem = items.get(index);
 
+    if (!this.hideTooltip) {
       context.getMatrices().push();
       context.getMatrices().translate(0, 0, 150f);
-      context.drawItemTooltip(MinecraftClient.getInstance().textRenderer, stack, mouseX, mouseY);
+      context.drawItemTooltip(MinecraftClient.getInstance().textRenderer, this.hoveredItem, mouseX, mouseY);
       context.getMatrices().pop();
     }
   }

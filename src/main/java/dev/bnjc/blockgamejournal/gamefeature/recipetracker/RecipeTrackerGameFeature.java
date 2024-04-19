@@ -298,8 +298,13 @@ public class RecipeTrackerGameFeature extends GameFeature {
     RenderSystem.blendFuncSeparate(GlStateManager.SrcFactor.SRC_ALPHA, GlStateManager.DstFactor.ONE_MINUS_SRC_ALPHA,
         GlStateManager.SrcFactor.ONE, GlStateManager.DstFactor.ONE_MINUS_SRC_ALPHA);
 
+    String worldName = "";
+    if (this.getMinecraftClient().world != null) {
+      worldName = this.getMinecraftClient().world.getRegistryKey().getValue().toString();
+    }
+
     for (NPCEntry entry : knownNPCs.values()) {
-      if (entry.getPosition() == null || !entry.isLocating()) {
+      if (entry.getPosition() == null || !entry.isLocating() || !worldName.equals(entry.getWorld())) {
         continue;
       }
 
@@ -309,7 +314,7 @@ public class RecipeTrackerGameFeature extends GameFeature {
 
       double distance = Math.sqrt(entry.getDistanceSqToEntity(cameraEntity));
 
-      int maxDistance = 1000; // TODO: Configurable
+      int maxDistance = 10_000; // TODO: Configurable
       if ((distance < maxDistance || maxDistance < 0 /* || entry == this.highlightedWaypoint */) && !this.getMinecraftClient().options.hudHidden) {
         boolean isPointedAt = this.isPointedAt(entry, distance, cameraEntity, tickDelta);
         String label = entry.getName();

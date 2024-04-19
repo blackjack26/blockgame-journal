@@ -52,7 +52,7 @@ public class JournalScreen extends Screen {
   private int top = 0;
 
   @Getter
-  private JournalMode.Type currentMode = JournalMode.Type.ITEM_SEARCH;
+  private JournalMode.Type currentMode;
 
   private final Screen parent;
   private TextFieldWidget search;
@@ -67,6 +67,7 @@ public class JournalScreen extends Screen {
     super(Text.translatable("blockgamejournal.recipe_journal"));
 
     this.parent = parent;
+    this.currentMode = BlockgameJournal.getConfig().getGeneralConfig().defaultMode;
   }
 
   @Override
@@ -229,6 +230,19 @@ public class JournalScreen extends Screen {
     this.updateItems(null);
     this.closeButton.visible = npc != null;
     this.search.setFocused(true);
+  }
+
+  @Override
+  public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
+    boolean handled = super.keyPressed(keyCode, scanCode, modifiers);
+
+    handled |= this.itemList.keyPressed(keyCode, scanCode, modifiers);
+
+    return handled;
+  }
+
+  public void refreshItems() {
+    this.updateItems(this.search.getText());
   }
 
   private void updateItems(String filter) {

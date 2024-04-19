@@ -5,6 +5,7 @@ import com.mojang.serialization.Codec;
 import dev.bnjc.blockgamejournal.BlockgameJournal;
 import dev.bnjc.blockgamejournal.journal.metadata.Metadata;
 import dev.bnjc.blockgamejournal.journal.npc.NPCEntry;
+import dev.bnjc.blockgamejournal.journal.npc.NPCItemStack;
 import dev.bnjc.blockgamejournal.journal.npc.NPCNames;
 import dev.bnjc.blockgamejournal.storage.Storage;
 import dev.bnjc.blockgamejournal.storage.backend.FileBasedBackend;
@@ -27,10 +28,7 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.function.Function;
 
 public class Journal {
@@ -152,35 +150,14 @@ public class Journal {
     return knownItems.get(key);
   }
 
+  public Optional<NPCEntry> getKnownNpc(String npcName) {
+    return Optional.ofNullable(knownNPCs.get(npcName));
+  }
+
   public @Nullable ItemStack getKnownNpcItem(String npcName) {
-    NPCEntry npcEntry = knownNPCs.get(npcName);
-    if (npcEntry == null) {
-      return null;
-    }
-
-    GameProfile gameProfile = npcEntry.getGameProfile();
-
-    ItemStack stack = new ItemStack(Items.PLAYER_HEAD);
-    stack.setSubNbt(PlayerHeadItem.SKULL_OWNER_KEY, NbtHelper.writeGameProfile(new NbtCompound(), gameProfile));
-
-    NPCNames.NPCName npcNameObj = NPCNames.get(npcName);
-    MutableText npcNameText = Text.literal(npcNameObj.name());
-    npcNameText.setStyle(npcNameText.getStyle().withItalic(false).withFormatting(Formatting.WHITE));
-    stack.setCustomName(npcNameText);
-
-    // Set "Lore" to the title of the NPC
-    if (npcNameObj.title() != null) {
-      MutableText loreText = Text.literal("« " + npcNameObj.title() + " »");
-      loreText.setStyle(loreText.getStyle().withItalic(false).withFormatting(Formatting.GRAY));
-
-      NbtList loreNbt = new NbtList();
-      loreNbt.add(NbtString.of(Text.Serializer.toJson(loreText)));
-      stack.getOrCreateSubNbt(ItemStack.DISPLAY_KEY).put(ItemStack.LORE_KEY, loreNbt);
-    }
-
-    stack.setSubNbt(NPC_NAME_KEY, NbtString.of(npcName));
-
-    return stack;
+    return NPCItemStack.from(npcName)
+        .map(NPCItemStack::getItemStack)
+        .orElse(null);
   }
 
   public boolean hasJournalEntry(ItemStack stack) {

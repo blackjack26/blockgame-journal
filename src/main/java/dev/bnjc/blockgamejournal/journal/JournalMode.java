@@ -1,5 +1,6 @@
 package dev.bnjc.blockgamejournal.journal;
 
+import net.minecraft.client.resource.language.I18n;
 import net.minecraft.item.Item;
 import net.minecraft.item.Items;
 
@@ -15,6 +16,11 @@ public record JournalMode(JournalMode.Type type, Item icon, int order) {
   public enum Type {
     ITEM_SEARCH,
     NPC_SEARCH,
-    FAVORITES,
+    FAVORITES;
+
+    @Override
+    public String toString() {
+      return I18n.translate("blockgamejournal.menu.mode." + this.name());
+    }
   }
 }

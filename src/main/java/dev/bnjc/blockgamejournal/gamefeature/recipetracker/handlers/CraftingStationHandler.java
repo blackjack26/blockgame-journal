@@ -13,7 +13,6 @@ import dev.bnjc.blockgamejournal.listener.screen.ScreenReceivedInventoryListener
 import dev.bnjc.blockgamejournal.util.ItemUtil;
 import dev.bnjc.blockgamejournal.util.NbtUtil;
 import lombok.Getter;
-import lombok.Setter;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.network.ClientPlayerEntity;
@@ -30,7 +29,6 @@ import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
 
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 import java.util.regex.Matcher;
@@ -69,8 +67,8 @@ public class CraftingStationHandler {
   private ActionResult handleOpenScreen(OpenScreenS2CPacket packet) {
     String screenName = packet.getName().getString();
 
-    // Look for screen name "Some Name (#page#/#max#)"
-    Matcher matcher = Pattern.compile("^([\\w\\s]+)\\s\\(\\d+/\\d+\\)").matcher(screenName);
+    // Look for screen name "Some Name (#page#/#max#)" - exclude "Party" from the name
+    Matcher matcher = Pattern.compile("^((?!Party)[\\w\\s]+)\\s\\(\\d+/\\d+\\)").matcher(screenName);
     PlayerEntity lastAttackedPlayer = this.gameFeature.getLastAttackedPlayer();
     if (matcher.find() ||
         (lastAttackedPlayer != null && screenName.equals(lastAttackedPlayer.getEntityName()))) {
