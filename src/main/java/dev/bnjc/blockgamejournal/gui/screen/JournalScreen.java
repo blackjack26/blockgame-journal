@@ -227,7 +227,6 @@ public class JournalScreen extends Screen {
 
     this.search.setText("");
     JournalScreen.lastSearch = "";
-    this.search.setFocused(true);
 
     this.updateItems(null);
     this.closeButton.visible = npc != null;

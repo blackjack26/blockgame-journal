@@ -5,6 +5,8 @@ import dev.bnjc.blockgamejournal.gui.screen.RecipeScreen;
 import dev.bnjc.blockgamejournal.journal.Journal;
 import dev.bnjc.blockgamejournal.journal.JournalEntry;
 import dev.bnjc.blockgamejournal.journal.JournalMode;
+import dev.bnjc.blockgamejournal.journal.npc.NPCEntity;
+import dev.bnjc.blockgamejournal.journal.npc.NPCEntry;
 import dev.bnjc.blockgamejournal.journal.npc.NPCItemStack;
 import dev.bnjc.blockgamejournal.util.GuiUtil;
 import dev.bnjc.blockgamejournal.util.ItemUtil;
@@ -90,17 +92,29 @@ public class ItemListWidget extends ClickableWidget {
         // Open RecipeDisplay screen
         MinecraftClient.getInstance().setScreen(new RecipeScreen(item, this.parent));
       } else if (this.mode == JournalMode.Type.FAVORITES) {
-        RecipeScreen recipeDisplay = new RecipeScreen(item, this.parent);
-        recipeDisplay.filterEntries(JournalEntry::isFavorite);
+        RecipeScreen recipeScreen = new RecipeScreen(item, this.parent);
+        recipeScreen.filterEntries(JournalEntry::isFavorite);
 
-        MinecraftClient.getInstance().setScreen(recipeDisplay);
+        MinecraftClient.getInstance().setScreen(recipeScreen);
       } else if (this.mode == JournalMode.Type.NPC_SEARCH) {
         if (item.getItem() instanceof PlayerHeadItem) {
           if (this.parent instanceof JournalScreen journalScreen && item.hasNbt()) {
             journalScreen.setSelectedNpc(item.getNbt().getString(Journal.NPC_NAME_KEY));
           }
         } else {
-          MinecraftClient.getInstance().setScreen(new RecipeScreen(item, this.parent));
+          RecipeScreen recipeScreen = new RecipeScreen(item, this.parent);
+          NPCEntity selectedNpc = JournalScreen.getSelectedNpc();
+          recipeScreen.filterEntries(entry -> {
+            if (selectedNpc == null) {
+              // If no NPC is selected, show all recipes
+              return true;
+            }
+
+            // Only show recipes that the selected NPC can craft
+            return entry.getNpcName().equals(selectedNpc.getNpcWorldName());
+          });
+
+          MinecraftClient.getInstance().setScreen(recipeScreen);
         }
       }
     }
