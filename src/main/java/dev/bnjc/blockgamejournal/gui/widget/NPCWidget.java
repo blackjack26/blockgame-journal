@@ -118,8 +118,7 @@ public class NPCWidget extends ClickableWidget {
     String npcTitle = this.entity.getNpcName().title();
     if (npcTitle != null) {
       MutableText npcTitleText = Text.literal(npcTitle).formatted(Formatting.GRAY);
-      bottomY = GuiUtil.drawMultiLineText(context, MinecraftClient.getInstance().textRenderer, this.x + 2,
-          bottomY, npcTitleText, this.width - 4, 10, 0, 0x404040, false);
+      context.drawText(MinecraftClient.getInstance().textRenderer, npcTitleText, this.x + 2, bottomY, 0x404040, false);
     }
 
     // Render locate button

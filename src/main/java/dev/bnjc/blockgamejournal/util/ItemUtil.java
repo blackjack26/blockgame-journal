@@ -27,7 +27,10 @@ public class ItemUtil {
       "mmoitems:ESSENCE_WATER",
       "mmoitems:ESSENCE_WIND",
       "mmoitems:ESSENCE_FIRE",
-      "mmoitems:ESSENCE_EARTH"
+      "mmoitems:ESSENCE_EARTH",
+      "mmoitems:PRISTINE_STONE",
+      "mmoitems:PRISTINE_WOOD",
+      "mmoitems:PRISTINE_HIDE"
   );
 
   public static String getKey(ItemStack itemStack) {

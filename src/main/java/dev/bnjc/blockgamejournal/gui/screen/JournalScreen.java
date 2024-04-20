@@ -4,6 +4,7 @@ import dev.bnjc.blockgamejournal.BlockgameJournal;
 import dev.bnjc.blockgamejournal.gui.widget.*;
 import dev.bnjc.blockgamejournal.journal.Journal;
 import dev.bnjc.blockgamejournal.journal.JournalEntry;
+import dev.bnjc.blockgamejournal.journal.JournalItemStack;
 import dev.bnjc.blockgamejournal.journal.JournalMode;
 import dev.bnjc.blockgamejournal.journal.npc.NPCEntity;
 import dev.bnjc.blockgamejournal.util.GuiUtil;
@@ -11,10 +12,12 @@ import dev.bnjc.blockgamejournal.util.SearchUtil;
 import lombok.Getter;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.DrawContext;
+import net.minecraft.client.gui.screen.ButtonTextures;
 import net.minecraft.client.gui.screen.Screen;
 import net.minecraft.client.gui.tooltip.Tooltip;
 import net.minecraft.client.gui.widget.ButtonWidget;
 import net.minecraft.client.gui.widget.TextFieldWidget;
+import net.minecraft.client.gui.widget.TexturedButtonWidget;
 import net.minecraft.client.resource.language.I18n;
 import net.minecraft.item.ItemStack;
 import net.minecraft.text.Text;
@@ -50,6 +53,9 @@ public class JournalScreen extends Screen {
   @Getter
   private static @Nullable NPCEntity selectedNpc = null;
 
+  @Getter
+  private static ItemListWidget.Sort npcItemSort = ItemListWidget.Sort.A_TO_Z;
+
   private int left = 0;
   private int top = 0;
 
@@ -57,19 +63,23 @@ public class JournalScreen extends Screen {
   private JournalMode.Type currentMode;
 
   private final Screen parent;
+
   private TextFieldWidget search;
   private ItemListWidget itemList;
   private VerticalScrollWidget scroll;
+
   private ButtonWidget closeButton;
+  private ButtonWidget sortButton;
   private NPCWidget npcWidget;
 
-  private List<ItemStack> items = Collections.emptyList();
+  private List<JournalItemStack> items = Collections.emptyList();
 
   public JournalScreen(@Nullable Screen parent) {
     super(Text.translatable("blockgamejournal.recipe_journal"));
 
     this.parent = parent;
     this.currentMode = BlockgameJournal.getConfig().getGeneralConfig().defaultMode;
+    npcItemSort = BlockgameJournal.getConfig().getGeneralConfig().defaultNpcSort;
   }
 
   @Override
@@ -138,6 +148,23 @@ public class JournalScreen extends Screen {
     );
     this.closeButton.visible = JournalScreen.selectedNpc != null;
     this.addDrawableChild(this.closeButton);
+
+    // Sort button
+    this.sortButton = new TexturedButtonWidget(
+        this.left + MENU_WIDTH - 2 * (3 + BUTTON_SIZE),
+        this.top + 5,
+        12,
+        12,
+        new ButtonTextures(GuiUtil.sprite("widgets/sort/button"), GuiUtil.sprite("widgets/sort/button_highlighted")),
+        button -> {
+          JournalScreen.npcItemSort = JournalScreen.npcItemSort == ItemListWidget.Sort.A_TO_Z ? ItemListWidget.Sort.SLOT : ItemListWidget.Sort.A_TO_Z;
+          this.sortButton.setTooltip(Tooltip.of(Text.translatable("blockgamejournal.sort." + JournalScreen.npcItemSort.name())));
+          this.refreshItems();
+        }
+    );
+    this.sortButton.setTooltip(Tooltip.of(Text.translatable("blockgamejournal.sort." + JournalScreen.npcItemSort.name())));
+    this.sortButton.visible = JournalScreen.selectedNpc != null;
+    this.addDrawableChild(this.sortButton);
 
     // NPC Widget
     this.npcWidget = new NPCWidget(JournalScreen.selectedNpc, this.left + MENU_WIDTH + 4, this.top, 68, 74);
@@ -230,6 +257,7 @@ public class JournalScreen extends Screen {
 
     this.updateItems(null);
     this.closeButton.visible = npc != null;
+    this.sortButton.visible = npc != null;
   }
 
   @Override
@@ -269,28 +297,48 @@ public class JournalScreen extends Screen {
       // Filter journal entry items
       this.items = Journal.INSTANCE.getEntries().keySet()
           .stream()
-          .map(Journal.INSTANCE::getKnownItem)
+          .map(JournalItemStack::fromKnownItem)
           .filter(Objects::nonNull)
-          .sorted(Comparator.comparing(a -> a.getName().getString().toLowerCase(Locale.ROOT)))
+          .sorted(Comparator.comparing(a -> a.getStack().getName().getString().toLowerCase(Locale.ROOT)))
           .toList();
     }
     else if (this.currentMode == JournalMode.Type.NPC_SEARCH) {
       // If filter matches "npc:Some Name", filter by recipes that have that NPC
       if (JournalScreen.selectedNpc != null) {
         this.items = Journal.INSTANCE.getEntries().entrySet().stream()
-            .filter(entry -> entry.getValue().stream().anyMatch(e -> e.getNpcName().toLowerCase(Locale.ROOT).equals(JournalScreen.selectedNpc.getNpcWorldName().toLowerCase(Locale.ROOT))))
-            .map(entry -> Journal.INSTANCE.getKnownItem(entry.getKey()))
-            .filter(Objects::nonNull)
-            .sorted(Comparator.comparing(a -> a.getName().getString().toLowerCase(Locale.ROOT)))
+            .filter(entry -> entry.getValue().stream().anyMatch(this::isNpcNameMatching))
+            .map(entry -> {
+              if (JournalScreen.npcItemSort == ItemListWidget.Sort.A_TO_Z) {
+                JournalItemStack stack = JournalItemStack.fromKnownItem(entry.getKey());
+                if (stack != null) {
+                  return List.of(stack);
+                }
+
+                return List.<JournalItemStack>of();
+              }
+
+              return entry.getValue().stream()
+                  .filter(this::isNpcNameMatching)
+                  .map((e) -> new JournalItemStack(e.getItem(), e.getSlot()))
+                  .toList();
+            })
+            .flatMap(List::stream)
+            .sorted(Comparator.comparing(a -> a.getStack().getName().getString().toLowerCase(Locale.ROOT)))
             .toList();
       }
       // Otherwise, show all known NPCs
       else {
         this.items = Journal.INSTANCE.getKnownNPCs().keySet()
             .stream()
-            .map(Journal.INSTANCE::getKnownNpcItem)
+            .map((key) -> {
+              ItemStack s = Journal.INSTANCE.getKnownNpcItem(key);
+              if (s != null) {
+                return new JournalItemStack(s);
+              }
+              return null;
+            })
             .filter(Objects::nonNull)
-            .sorted(Comparator.comparing(a -> a.getName().getString().toLowerCase(Locale.ROOT)))
+            .sorted(Comparator.comparing(a -> a.getStack().getName().getString().toLowerCase(Locale.ROOT)))
             .toList();
       }
     }
@@ -299,9 +347,9 @@ public class JournalScreen extends Screen {
       this.items = Journal.INSTANCE.getEntries().entrySet()
           .stream()
           .filter(entry -> entry.getValue().stream().anyMatch(JournalEntry::isFavorite))
-          .map(entry -> Journal.INSTANCE.getKnownItem(entry.getKey()))
+          .map(entry -> JournalItemStack.fromKnownItem(entry.getKey()))
           .filter(Objects::nonNull)
-          .sorted(Comparator.comparing(a -> a.getName().getString().toLowerCase(Locale.ROOT)))
+          .sorted(Comparator.comparing(a -> a.getStack().getName().getString().toLowerCase(Locale.ROOT)))
           .toList();
     }
     else {
@@ -313,16 +361,23 @@ public class JournalScreen extends Screen {
   private void filter(@Nullable String filter) {
     JournalScreen.lastSearch = filter;
 
-    List<ItemStack> filtered;
+    List<JournalItemStack> filtered;
     if (filter == null || filter.isEmpty()) {
       filtered = this.items;
     } else {
       filtered = this.items.stream()
-          .filter(item -> SearchUtil.defaultPredicate(item, filter))
+          .filter(item -> SearchUtil.defaultPredicate(item.getStack(), filter))
           .toList();
     }
 
     this.itemList.setItems(filtered);
     this.scroll.setDisabled(filtered.size() <= GRID_ROWS * GRID_COLUMNS);
+  }
+
+  private boolean isNpcNameMatching(JournalEntry entry) {
+    if (JournalScreen.selectedNpc == null) {
+      return false;
+    }
+    return entry.getNpcName().toLowerCase(Locale.ROOT).equals(selectedNpc.getNpcWorldName().toLowerCase(Locale.ROOT));
   }
 }
