@@ -1,10 +1,12 @@
 package dev.bnjc.blockgamejournal.gui.screen;
 
 import dev.bnjc.blockgamejournal.BlockgameJournal;
+import dev.bnjc.blockgamejournal.gui.widget.NPCWidget;
 import dev.bnjc.blockgamejournal.gui.widget.RecipeWidget;
 import dev.bnjc.blockgamejournal.journal.DecomposedJournalEntry;
 import dev.bnjc.blockgamejournal.journal.Journal;
 import dev.bnjc.blockgamejournal.journal.JournalEntry;
+import dev.bnjc.blockgamejournal.journal.JournalMode;
 import dev.bnjc.blockgamejournal.util.GuiUtil;
 import dev.bnjc.blockgamejournal.util.ItemUtil;
 import lombok.Getter;
@@ -25,7 +27,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.function.Predicate;
 
-public class RecipeDisplay extends Screen {
+public class RecipeScreen extends Screen {
   private static final Identifier BACKGROUND_SPRITE = GuiUtil.sprite("background");
 
   private static final int BUTTON_SIZE = 14;
@@ -48,7 +50,7 @@ public class RecipeDisplay extends Screen {
   private TexturedButtonWidget favoriteButton;
   private TexturedButtonWidget unfavoriteButton;
 
-  public RecipeDisplay(String key, Screen parent) {
+  public RecipeScreen(String key, Screen parent) {
     super(Text.empty());
 
     this.key = key;
@@ -56,7 +58,7 @@ public class RecipeDisplay extends Screen {
     this.filterEntries(null);
   }
 
-  public RecipeDisplay(ItemStack stack, Screen parent) {
+  public RecipeScreen(ItemStack stack, Screen parent) {
     this(ItemUtil.getKey(stack), parent);
   }
 
@@ -126,7 +128,7 @@ public class RecipeDisplay extends Screen {
     this.recipeWidget.setEntry(currentEntry);
 
     // Previous recipe button
-    if (this.parent instanceof RecipeDisplay) {
+    if (this.parent instanceof RecipeScreen) {
       TexturedButtonWidget prevRecipeButton = new TexturedButtonWidget(
           this.left + 5,
           this.top + 5,
@@ -177,7 +179,9 @@ public class RecipeDisplay extends Screen {
           }
 
           DecomposedJournalEntry decomposed = this.entries.get(this.page).decompose();
-          MinecraftClient.getInstance().setScreen(new DecompositionDisplay(decomposed, this));
+
+          boolean showNpc = this.parent instanceof JournalScreen journalScreen && journalScreen.getCurrentMode() == JournalMode.Type.NPC_SEARCH;
+          MinecraftClient.getInstance().setScreen(new DecompositionScreen(decomposed, this, showNpc));
         }
     );
     this.decomposeButton.setTooltip(Tooltip.of(Text.translatable("blockgamejournal.decompose_recipe")));
@@ -226,6 +230,12 @@ public class RecipeDisplay extends Screen {
     this.unfavoriteButton.visible = currentEntry.isFavorite();
     this.addDrawableChild(this.unfavoriteButton);
 
+    // NPC Widget
+    if (this.parent instanceof JournalScreen journalScreen && journalScreen.getCurrentMode() == JournalMode.Type.NPC_SEARCH) {
+      NPCWidget npcWidget = new NPCWidget(JournalScreen.getSelectedNpc(), this.left + MENU_WIDTH + 4, this.top, 68, 74);
+      this.addDrawableChild(npcWidget);
+    }
+
     this.goToPage(this.page);
   }
 
@@ -246,8 +256,8 @@ public class RecipeDisplay extends Screen {
   public void close() {
     // Go back to the Journal screen
     Screen p = this.parent;
-    while (p instanceof RecipeDisplay) {
-      p = ((RecipeDisplay) p).parent;
+    while (p instanceof RecipeScreen) {
+      p = ((RecipeScreen) p).parent;
     }
     MinecraftClient.getInstance().setScreen(p);
   }

@@ -1,7 +1,6 @@
 package dev.bnjc.blockgamejournal.gui.widget;
 
-import dev.bnjc.blockgamejournal.BlockgameJournal;
-import dev.bnjc.blockgamejournal.gui.screen.RecipeDisplay;
+import dev.bnjc.blockgamejournal.gui.screen.RecipeScreen;
 import dev.bnjc.blockgamejournal.journal.Journal;
 import dev.bnjc.blockgamejournal.journal.JournalEntry;
 import dev.bnjc.blockgamejournal.journal.recipe.JournalPlayerInventory;
@@ -15,9 +14,6 @@ import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.screen.Screen;
 import net.minecraft.client.gui.screen.narration.NarrationMessageBuilder;
 import net.minecraft.client.gui.widget.ClickableWidget;
-import net.minecraft.client.network.ClientPlayerEntity;
-import net.minecraft.entity.Entity;
-import net.minecraft.entity.player.PlayerInventory;
 import net.minecraft.item.ItemStack;
 import net.minecraft.item.Items;
 import net.minecraft.text.MutableText;
@@ -27,7 +23,6 @@ import net.minecraft.util.Formatting;
 import net.minecraft.util.math.MathHelper;
 import org.jetbrains.annotations.Nullable;
 
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -85,7 +80,7 @@ public class RecipeWidget extends ClickableWidget {
         if (mouseY + scrollY >= bounds[0] && mouseY + scrollY <= bounds[1]) {
           if (Journal.INSTANCE != null && Journal.INSTANCE.hasJournalEntry(entry.getKey())) {
             this.playDownSound(MinecraftClient.getInstance().getSoundManager());
-            MinecraftClient.getInstance().setScreen(new RecipeDisplay(entry.getKey(), this.parent));
+            MinecraftClient.getInstance().setScreen(new RecipeScreen(entry.getKey(), this.parent));
             return true;
           }
         }

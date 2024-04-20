@@ -46,6 +46,8 @@ public class JournalScreen extends Screen {
   private static final int MODE_ICON_SPACING = 24;
 
   private static @Nullable String lastSearch = null;
+
+  @Getter
   private static @Nullable NPCEntity selectedNpc = null;
 
   private int left = 0;
@@ -171,10 +173,6 @@ public class JournalScreen extends Screen {
             this.currentMode = mode.type();
             buttons.get(this.currentMode).setHighlighted(true);
 
-            this.search.setText("");
-            JournalScreen.lastSearch = "";
-            this.search.setFocused(true);
-
             this.setSelectedNpc(null);
           }
       ));
@@ -227,9 +225,12 @@ public class JournalScreen extends Screen {
     }
     this.npcWidget.setEntity(JournalScreen.selectedNpc);
 
+    this.search.setText("");
+    JournalScreen.lastSearch = "";
+    this.search.setFocused(true);
+
     this.updateItems(null);
     this.closeButton.visible = npc != null;
-    this.search.setFocused(true);
   }
 
   @Override

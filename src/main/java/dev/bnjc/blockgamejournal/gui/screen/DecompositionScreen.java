@@ -1,7 +1,9 @@
 package dev.bnjc.blockgamejournal.gui.screen;
 
 import dev.bnjc.blockgamejournal.gui.widget.DecompositionListWidget;
+import dev.bnjc.blockgamejournal.gui.widget.NPCWidget;
 import dev.bnjc.blockgamejournal.journal.DecomposedJournalEntry;
+import dev.bnjc.blockgamejournal.journal.JournalMode;
 import dev.bnjc.blockgamejournal.util.GuiUtil;
 import dev.bnjc.blockgamejournal.util.ItemUtil;
 import net.minecraft.client.MinecraftClient;
@@ -19,7 +21,7 @@ import net.minecraft.util.Identifier;
 
 import java.util.List;
 
-public class DecompositionDisplay extends Screen {
+public class DecompositionScreen extends Screen {
   private static final Identifier BACKGROUND_SPRITE = GuiUtil.sprite("background");
 
   private static final int BUTTON_SIZE = 14;
@@ -28,6 +30,7 @@ public class DecompositionDisplay extends Screen {
 
   private final DecomposedJournalEntry entry;
   private final Screen parent;
+  private final boolean showNpc;
 
   private int left = 0;
   private int top = 0;
@@ -35,11 +38,12 @@ public class DecompositionDisplay extends Screen {
 
   private DecompositionListWidget listWidget;
 
-  public DecompositionDisplay(DecomposedJournalEntry entry, Screen parent) {
+  public DecompositionScreen(DecomposedJournalEntry entry, Screen parent, boolean showNpc) {
     super(Text.empty());
 
     this.entry = entry;
     this.parent = parent;
+    this.showNpc = showNpc;
   }
 
   @Override
@@ -62,7 +66,7 @@ public class DecompositionDisplay extends Screen {
     ));
 
     // Previous recipe button
-    if (this.parent instanceof RecipeDisplay) {
+    if (this.parent instanceof RecipeScreen) {
       TexturedButtonWidget prevRecipeButton = new TexturedButtonWidget(
           this.left + 5,
           this.top + 5,
@@ -74,14 +78,20 @@ public class DecompositionDisplay extends Screen {
       prevRecipeButton.setTooltip(Tooltip.of(Text.translatable("blockgamejournal.back")));
       this.addDrawableChild(prevRecipeButton);
     }
+
+    // NPC Widget
+    if (this.showNpc) {
+      NPCWidget npcWidget = new NPCWidget(JournalScreen.getSelectedNpc(), this.left + MENU_WIDTH + 4, this.top, 68, 74);
+      this.addDrawableChild(npcWidget);
+    }
   }
 
   @Override
   public void close() {
     // Go back to the Journal screen
     Screen p = this.parent;
-    while (p instanceof RecipeDisplay) {
-      p = ((RecipeDisplay) p).getParent();
+    while (p instanceof RecipeScreen) {
+      p = ((RecipeScreen) p).getParent();
     }
     MinecraftClient.getInstance().setScreen(p);
   }

@@ -1,7 +1,7 @@
 package dev.bnjc.blockgamejournal.gui.widget;
 
 import dev.bnjc.blockgamejournal.gui.screen.JournalScreen;
-import dev.bnjc.blockgamejournal.gui.screen.RecipeDisplay;
+import dev.bnjc.blockgamejournal.gui.screen.RecipeScreen;
 import dev.bnjc.blockgamejournal.journal.Journal;
 import dev.bnjc.blockgamejournal.journal.JournalEntry;
 import dev.bnjc.blockgamejournal.journal.JournalMode;
@@ -88,9 +88,9 @@ public class ItemListWidget extends ClickableWidget {
     if (item != null) {
       if (this.mode == JournalMode.Type.ITEM_SEARCH) {
         // Open RecipeDisplay screen
-        MinecraftClient.getInstance().setScreen(new RecipeDisplay(item, this.parent));
+        MinecraftClient.getInstance().setScreen(new RecipeScreen(item, this.parent));
       } else if (this.mode == JournalMode.Type.FAVORITES) {
-        RecipeDisplay recipeDisplay = new RecipeDisplay(item, this.parent);
+        RecipeScreen recipeDisplay = new RecipeScreen(item, this.parent);
         recipeDisplay.filterEntries(JournalEntry::isFavorite);
 
         MinecraftClient.getInstance().setScreen(recipeDisplay);
@@ -100,7 +100,7 @@ public class ItemListWidget extends ClickableWidget {
             journalScreen.setSelectedNpc(item.getNbt().getString(Journal.NPC_NAME_KEY));
           }
         } else {
-          MinecraftClient.getInstance().setScreen(new RecipeDisplay(item, this.parent));
+          MinecraftClient.getInstance().setScreen(new RecipeScreen(item, this.parent));
         }
       }
     }
@@ -210,7 +210,7 @@ public class ItemListWidget extends ClickableWidget {
 
     if (!this.hideTooltip) {
       context.getMatrices().push();
-      context.getMatrices().translate(0, 0, 150f);
+      context.getMatrices().translate(0, 0, 200.0f);
       context.drawItemTooltip(MinecraftClient.getInstance().textRenderer, this.hoveredItem, mouseX, mouseY);
       context.getMatrices().pop();
     }
