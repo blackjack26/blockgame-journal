@@ -7,6 +7,7 @@ import dev.bnjc.blockgamejournal.journal.DecomposedJournalEntry;
 import dev.bnjc.blockgamejournal.journal.Journal;
 import dev.bnjc.blockgamejournal.journal.JournalEntry;
 import dev.bnjc.blockgamejournal.journal.JournalMode;
+import dev.bnjc.blockgamejournal.journal.npc.NPCEntity;
 import dev.bnjc.blockgamejournal.util.GuiUtil;
 import dev.bnjc.blockgamejournal.util.ItemUtil;
 import lombok.Getter;
@@ -49,6 +50,7 @@ public class RecipeScreen extends Screen {
   private TexturedButtonWidget decomposeButton;
   private TexturedButtonWidget favoriteButton;
   private TexturedButtonWidget unfavoriteButton;
+  private NPCWidget npcWidget;
 
   public RecipeScreen(String key, Screen parent) {
     super(Text.empty());
@@ -231,9 +233,10 @@ public class RecipeScreen extends Screen {
     this.addDrawableChild(this.unfavoriteButton);
 
     // NPC Widget
+    this.npcWidget = new NPCWidget(null, this.left + MENU_WIDTH + 4, this.top, 68, 74);
+    this.addDrawableChild(this.npcWidget);
     if (this.parent instanceof JournalScreen journalScreen && journalScreen.getCurrentMode() == JournalMode.Type.NPC_SEARCH) {
-      NPCWidget npcWidget = new NPCWidget(JournalScreen.getSelectedNpc(), this.left + MENU_WIDTH + 4, this.top, 68, 74);
-      this.addDrawableChild(npcWidget);
+      this.npcWidget.setEntity(JournalScreen.getSelectedNpc());
     }
 
     this.goToPage(this.page);
@@ -267,7 +270,15 @@ public class RecipeScreen extends Screen {
 
     this.updateButtons();
 
-    this.recipeWidget.setEntry(this.entries.get(this.page));
+    JournalEntry entry = this.entries.get(this.page);
+    this.recipeWidget.setEntry(entry);
+
+    if (entry != null) {
+      NPCEntity entity = new NPCEntity(MinecraftClient.getInstance().world, entry.getNpcName());
+      this.npcWidget.setEntity(entity);
+    } else {
+      this.npcWidget.setEntity(null);
+    }
   }
 
   private void updateButtons() {
