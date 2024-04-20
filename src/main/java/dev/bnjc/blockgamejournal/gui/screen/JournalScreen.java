@@ -234,9 +234,22 @@ public class JournalScreen extends Screen {
 
   @Override
   public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
-    boolean handled = super.keyPressed(keyCode, scanCode, modifiers);
+    boolean handled = this.itemList.keyPressed(keyCode, scanCode, modifiers);
 
-    handled |= this.itemList.keyPressed(keyCode, scanCode, modifiers);
+    if (!handled) {
+      handled = super.keyPressed(keyCode, scanCode, modifiers);
+    }
+
+    return handled;
+  }
+
+  @Override
+  public boolean charTyped(char chr, int modifiers) {
+    boolean handled = this.itemList.charTyped(chr, modifiers);
+
+    if (!handled) {
+      handled = super.charTyped(chr, modifiers);
+    }
 
     return handled;
   }

@@ -121,42 +121,9 @@ public class ItemListWidget extends ClickableWidget {
   }
 
   @Override
-  public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
-    if (this.hoveredItem != null && Journal.INSTANCE != null) {
-      if (this.mode == JournalMode.Type.NPC_SEARCH && this.hoveredItem.getItem() instanceof PlayerHeadItem) {
-        String npcName = this.hoveredItem.getNbt().getString(Journal.NPC_NAME_KEY);
-        Journal.INSTANCE.getKnownNpc(npcName).ifPresent(npc -> {
-          if (keyCode == 65) {
-            // If NPC is locating and the A key is pressed, stop locating
-            if (npc.isLocating()) {
-              npc.setLocating(false);
-              NPCItemStack.updateStack(npcName, this.hoveredItem, npc);
-            }
-            // If NPC is not locating and the A key is pressed, start locating
-            else if (npc.getPosition() != null) {
-              npc.setLocating(true);
-              NPCItemStack.updateStack(npcName, this.hoveredItem, npc);
-            }
-          }
-        });
-      }
-      else if (this.mode == JournalMode.Type.FAVORITES) {
-        if (keyCode == 65) {
-          if (Journal.INSTANCE.hasJournalEntry(this.hoveredItem)) {
-            List<JournalEntry> entries = Journal.INSTANCE.getEntries().getOrDefault(ItemUtil.getKey(this.hoveredItem), new ArrayList<>());
-            for (JournalEntry entry : entries) {
-              entry.setFavorite(false);
-            }
-
-            if (this.parent instanceof JournalScreen journalScreen) {
-              journalScreen.refreshItems();
-            }
-          }
-        }
-      }
-    }
-
-    return super.keyPressed(keyCode, scanCode, modifiers);
+  public boolean charTyped(char chr, int modifiers) {
+    boolean handled = this.handledChar(chr);
+    return handled || super.charTyped(chr, modifiers);
   }
 
   @Override
@@ -169,6 +136,53 @@ public class ItemListWidget extends ClickableWidget {
   @Override
   protected void appendClickableNarrations(NarrationMessageBuilder builder) {
 
+  }
+
+  private boolean handledChar(char keyCode) {
+    if (this.hoveredItem == null || Journal.INSTANCE == null) {
+      return false;
+    }
+
+    if (this.mode == JournalMode.Type.NPC_SEARCH && this.hoveredItem.getItem() instanceof PlayerHeadItem) {
+      String npcName = this.hoveredItem.getNbt().getString(Journal.NPC_NAME_KEY);
+      var npcEntry = Journal.INSTANCE.getKnownNpc(npcName);
+
+      if (npcEntry.isPresent()) {
+        NPCEntry npc = npcEntry.get();
+        if (keyCode == 'a' || keyCode == 'A') {
+          // If NPC is locating and the A key is pressed, stop locating
+          if (npc.isLocating()) {
+            npc.setLocating(false);
+            NPCItemStack.updateStack(npcName, this.hoveredItem, npc);
+            return true;
+          }
+
+          // If NPC is not locating and the A key is pressed, start locating
+          if (npc.getPosition() != null) {
+            npc.setLocating(true);
+            NPCItemStack.updateStack(npcName, this.hoveredItem, npc);
+            return true;
+          }
+        }
+      }
+    }
+    else if (this.mode == JournalMode.Type.FAVORITES) {
+      if (keyCode == 'a' || keyCode == 'A') {
+        if (Journal.INSTANCE.hasJournalEntry(this.hoveredItem)) {
+          List<JournalEntry> entries = Journal.INSTANCE.getEntries().getOrDefault(ItemUtil.getKey(this.hoveredItem), new ArrayList<>());
+          for (JournalEntry entry : entries) {
+            entry.setFavorite(false);
+          }
+
+          if (this.parent instanceof JournalScreen journalScreen) {
+            journalScreen.refreshItems();
+          }
+          return true;
+        }
+      }
+    }
+
+    return false;
   }
 
   private void renderItems(DrawContext context) {
