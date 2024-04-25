@@ -30,17 +30,26 @@ public abstract class ScrollableViewWidget extends ScrollableWidget {
   }
 
   @Override
+  public double getScrollY() {
+    return super.getScrollY();
+  }
+
+  @Override
   protected void renderOverlay(DrawContext context) {
     if (this.overflows()) {
       this.drawScrollbar(context);
     }
   }
 
+  protected int getScrollbarWidth() {
+    return 6;
+  }
+
   private void drawScrollbar(DrawContext context) {
     int h = this.getScrollbarThumbHeight();
     int x = this.getX() + this.getWidth();
     int y = Math.max(this.getY(), (int)this.getScrollY() * (this.height - h) / this.getMaxScrollY() + this.getY());
-    context.drawGuiTexture(SCROLLER_TEXTURE, x - 2, y, 6, h);
+    context.drawGuiTexture(SCROLLER_TEXTURE, x - 2, y, this.getScrollbarWidth(), h);
   }
 
   private int getScrollbarThumbHeight() {
@@ -48,6 +57,11 @@ public abstract class ScrollableViewWidget extends ScrollableWidget {
   }
 
   private int getContentsHeightWithPadding() {
-    return this.getContentsHeight() + 4;
+    return this.getContentsHeight();
+  }
+
+  @Override
+  protected int getPadding() {
+    return 0;
   }
 }

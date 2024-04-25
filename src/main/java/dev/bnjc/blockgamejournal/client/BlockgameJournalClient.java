@@ -4,6 +4,7 @@ import dev.bnjc.blockgamejournal.BlockgameJournal;
 import dev.bnjc.blockgamejournal.config.ConfigManager;
 import dev.bnjc.blockgamejournal.gamefeature.GameFeature;
 import dev.bnjc.blockgamejournal.gamefeature.recipetracker.RecipeTrackerGameFeature;
+import dev.bnjc.blockgamejournal.gamefeature.statprofiles.StatProfileGameFeature;
 import lombok.Getter;
 import lombok.Setter;
 import net.fabricmc.api.ClientModInitializer;
@@ -58,6 +59,7 @@ public class BlockgameJournalClient implements ClientModInitializer {
     BlockgameJournal.LOGGER.info("[Blockgame Journal] Loading game features...");
 
     loadGameFeature(new RecipeTrackerGameFeature());
+    loadGameFeature(new StatProfileGameFeature());
 
     // Tick all game features after client ticks
     ClientTickEvents.END_CLIENT_TICK.register((client) -> {

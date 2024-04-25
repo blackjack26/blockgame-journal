@@ -19,15 +19,19 @@ public class GuiUtil {
   }
 
   public static TexturedButtonWidget close(int x, int y, ButtonWidget.PressAction pressAction) {
+    return GuiUtil.button(x, y, "widgets/close", "blockgamejournal.close", pressAction);
+  }
+
+  public static TexturedButtonWidget button(int x, int y, String path, String tooltipKey, ButtonWidget.PressAction pressAction) {
     TexturedButtonWidget button = new TexturedButtonWidget(
         x,
         y,
         12,
         12,
-        new ButtonTextures(sprite("widgets/close/button"), sprite("widgets/close/button_highlighted")),
+        new ButtonTextures(sprite(path + "/button"), sprite(path + "/button_highlighted")),
         pressAction
     );
-    button.setTooltip(Tooltip.of(Text.translatable("blockgamejournal.close")));
+    button.setTooltip(Tooltip.of(Text.translatable(tooltipKey)));
     return button;
   }
 

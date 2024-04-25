@@ -3,7 +3,6 @@ package dev.bnjc.blockgamejournal.gui.screen;
 import dev.bnjc.blockgamejournal.gui.widget.DecompositionListWidget;
 import dev.bnjc.blockgamejournal.gui.widget.NPCWidget;
 import dev.bnjc.blockgamejournal.journal.DecomposedJournalEntry;
-import dev.bnjc.blockgamejournal.journal.JournalMode;
 import dev.bnjc.blockgamejournal.util.GuiUtil;
 import dev.bnjc.blockgamejournal.util.ItemUtil;
 import net.minecraft.client.MinecraftClient;
