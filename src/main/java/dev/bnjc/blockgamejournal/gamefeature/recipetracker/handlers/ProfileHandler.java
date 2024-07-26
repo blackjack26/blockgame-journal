@@ -62,6 +62,7 @@ public class ProfileHandler {
     parseProfessionLevel(inv, Profession.FISHING);
     parseProfessionLevel(inv, Profession.HERBALISM);
     parseProfessionLevel(inv, Profession.RUNECARVING);
+    parseProfessionLevel(inv, Profession.COOKING);
 
     return ActionResult.PASS;
   }

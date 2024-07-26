@@ -10,6 +10,7 @@ import dev.bnjc.blockgamejournal.journal.JournalMode;
 import dev.bnjc.blockgamejournal.journal.npc.NPCEntity;
 import dev.bnjc.blockgamejournal.journal.npc.NPCEntry;
 import dev.bnjc.blockgamejournal.journal.npc.NPCItemStack;
+import dev.bnjc.blockgamejournal.journal.npc.NPCUtil;
 import dev.bnjc.blockgamejournal.util.GuiUtil;
 import dev.bnjc.blockgamejournal.util.ItemUtil;
 import lombok.Getter;
@@ -172,6 +173,10 @@ public class ItemListWidget extends ClickableWidget {
 
       if (npcEntry.isPresent()) {
         NPCEntry npc = npcEntry.get();
+
+        // Print key code
+        BlockgameJournal.LOGGER.info("Key code: {}", keyCode);
+
         if (keyCode == 'a' || keyCode == 'A') {
           // If NPC is locating and the A key is pressed, stop locating
           if (npc.isLocating()) {
@@ -186,6 +191,16 @@ public class ItemListWidget extends ClickableWidget {
             NPCItemStack.updateStack(npcName, this.hoveredItem, npc);
             return true;
           }
+        }
+        else if (keyCode == 'x' || keyCode == 'X') {
+          // Remove NPC from known NPCs
+          NPCUtil.removeNPC(npcName);
+
+          if (this.parent instanceof JournalScreen journalScreen) {
+            journalScreen.refreshItems();
+          }
+
+          return true;
         }
       }
     }

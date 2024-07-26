@@ -6,6 +6,7 @@ import dev.bnjc.blockgamejournal.gamefeature.recipetracker.station.CraftingStati
 import dev.bnjc.blockgamejournal.journal.Journal;
 import dev.bnjc.blockgamejournal.journal.JournalEntry;
 import dev.bnjc.blockgamejournal.journal.npc.NPCEntry;
+import dev.bnjc.blockgamejournal.journal.npc.NPCUtil;
 import dev.bnjc.blockgamejournal.listener.interaction.SlotClickedListener;
 import dev.bnjc.blockgamejournal.listener.screen.DrawSlotListener;
 import dev.bnjc.blockgamejournal.listener.screen.ScreenOpenedListener;
@@ -38,7 +39,7 @@ public class CraftingStationHandler {
   private static final Logger LOGGER = BlockgameJournal.getLogger("Crafting Station");
 
   private static final Pattern COIN_PATTERN = Pattern.compile("([✔✖]) Requires (\\d+(?:\\.\\d+)?) Coin");
-  private static final Pattern KNOWLEDGE_PATTERN = Pattern.compile("([✔✖]) Recipe Known");
+  private static final Pattern KNOWLEDGE_PATTERN = Pattern.compile("([✔✖]) Recipe (Known|Learned)");
   private static final Pattern CLASS_PATTERN = Pattern.compile("([✔✖]) Requires (\\d+) in ([A-Za-z]+)");
   private static final Pattern INGREDIENT_HEADER_PATTERN = Pattern.compile("Ingredients:");
   private static final Pattern INGREDIENT_PATTERN = Pattern.compile("([✔✖]) (\\d+) (.+?)$");
@@ -78,7 +79,7 @@ public class CraftingStationHandler {
         this.npcName = lastAttackedPlayer.getEntityName();
 
         if (Journal.INSTANCE != null) {
-          Journal.INSTANCE.getKnownNPCs().put(this.npcName, NPCEntry.of(lastAttackedPlayer));
+          NPCUtil.createOrUpdate(this.npcName, lastAttackedPlayer);
         }
       } else {
         this.npcName = matcher.group(1);

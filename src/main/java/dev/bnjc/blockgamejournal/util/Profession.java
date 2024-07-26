@@ -13,7 +13,8 @@ public enum Profession {
   EINHERJAR("Profile", 15, Items.PLAYER_HEAD),
   FISHING("Fishing", 19, Items.FISHING_ROD),
   HERBALISM("Herbalism", 20, Items.IRON_HOE),
-  RUNECARVING("Runecarving", 21, Items.TURTLE_EGG);
+  RUNECARVING("Runecarving", 21, Items.TURTLE_EGG),
+  COOKING("Cooking", 28, Items.CAMPFIRE);
 
   private final String name;
   private final int slot;

@@ -17,8 +17,10 @@ public final class NPCNames {
     NAMES.put("Botanist", new NPCName("Hesha", "Botanist"));
     NAMES.put("Mint", new NPCName("Mint", "Botanist"));
     NAMES.put("Bowyer", new NPCName("Brent", "Bowyer"));
-    NAMES.put("Chef", new NPCName("Ken", "Chef"));
+    NAMES.put("Chef Holiday", new NPCName("Holiday", "Chef"));
+    NAMES.put("Chef Ken", new NPCName("Ken", "Chef"));
     NAMES.put("Chef Sue", new NPCName("Sue", "Chef"));
+    NAMES.put("Jam Master", new NPCName("Jam Master", null));
     NAMES.put("Baelin", new NPCName("Baelin", "Fisherman"));
     NAMES.put("Fisherman", new NPCName("Franky", "Fisherman"));
     NAMES.put("Guardian", new NPCName("Armand", "Guardian"));

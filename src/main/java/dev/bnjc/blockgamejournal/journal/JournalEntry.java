@@ -31,7 +31,7 @@ public final class JournalEntry {
               Codec.INT.orElse(-1).fieldOf("requiredLevel").forGetter(JournalEntry::getRequiredLevel),
               Codec.BOOL.optionalFieldOf("favorite", false).forGetter(JournalEntry::isFavorite)
           ).apply(instance, (key, count, revisionId, ingredients, npcName, slot, storedAt, recipeKnown, cost, requiredClass, requiredLevel, favorite) -> {
-            JournalEntry entry = new JournalEntry(key, count, revisionId, ingredients,  npcName, slot, storedAt);
+            JournalEntry entry = new JournalEntry(key, count, revisionId, ingredients, npcName, slot, storedAt);
             entry.setRecipeKnown(recipeKnown);
             entry.setCost(cost);
             entry.setRequiredClass(requiredClass);
@@ -64,7 +64,8 @@ public final class JournalEntry {
   /**
    * The name of the NPC that the item can be crafted at.
    */
-  private final String npcName;
+  @Setter
+  private String npcName;
 
   /**
    * The slot in the inventory where the item was stored.

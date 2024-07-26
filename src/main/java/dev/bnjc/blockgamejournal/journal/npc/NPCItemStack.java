@@ -98,7 +98,6 @@ public class NPCItemStack {
           .append(Text.literal(" to stop locating").formatted(Formatting.GRAY));
       stopLocatingText.setStyle(stopLocatingText.getStyle().withItalic(false));
       loreNbt.add(NbtString.of(Text.Serializer.toJson(stopLocatingText)));
-      loreNbt.add(NbtString.of(Text.Serializer.toJson(Text.literal(""))));
     }
     else if (npcEntry.getPosition() != null) {
       // Add an empty line between the title and the helper text
@@ -113,8 +112,14 @@ public class NPCItemStack {
           .append(Text.literal(" to locate").formatted(Formatting.GRAY));
       locateText.setStyle(locateText.getStyle().withItalic(false));
       loreNbt.add(NbtString.of(Text.Serializer.toJson(locateText)));
-      loreNbt.add(NbtString.of(Text.Serializer.toJson(Text.literal(""))));
     }
+
+    MutableText removeNpcText = Text.literal(" ⚐ ").formatted(Formatting.GRAY)
+        .append(Text.literal("Press X").formatted(Formatting.RED))
+        .append(Text.literal(" to remove NPC").formatted(Formatting.GRAY));
+    removeNpcText.setStyle(removeNpcText.getStyle().withItalic(false));
+    loreNbt.add(NbtString.of(Text.Serializer.toJson(removeNpcText)));
+    loreNbt.add(NbtString.of(Text.Serializer.toJson(Text.literal(""))));
 
     this.itemStack.getOrCreateSubNbt(ItemStack.DISPLAY_KEY).put(ItemStack.LORE_KEY, loreNbt);
   }

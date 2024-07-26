@@ -14,6 +14,7 @@ import net.minecraft.util.math.BlockPos;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.Optional;
+import java.util.UUID;
 
 @Getter
 public class NPCEntry {
@@ -87,5 +88,9 @@ public class NPCEntry {
 
   public double getDistanceSqToEntity(Entity entity) {
     return entity.squaredDistanceTo(this.getX() + 0.5, this.getY() + 0.5, this.getZ() + 0.5);
+  }
+
+  public UUID getId() {
+    return this.gameProfile.getId();
   }
 }
