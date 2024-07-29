@@ -1,5 +1,7 @@
 package dev.bnjc.blockgamejournal.util;
 
+import dev.bnjc.blockgamejournal.BlockgameJournal;
+import dev.bnjc.blockgamejournal.gamefeature.recipetracker.station.CraftingStationItem;
 import dev.bnjc.blockgamejournal.journal.Journal;
 import dev.bnjc.blockgamejournal.journal.JournalEntry;
 import net.minecraft.client.MinecraftClient;
@@ -10,6 +12,7 @@ import net.minecraft.registry.Registries;
 import net.minecraft.util.Identifier;
 import org.jetbrains.annotations.Nullable;
 
+import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 
@@ -30,7 +33,22 @@ public class ItemUtil {
       "mmoitems:ESSENCE_EARTH",
       "mmoitems:PRISTINE_STONE",
       "mmoitems:PRISTINE_WOOD",
-      "mmoitems:PRISTINE_HIDE"
+      "mmoitems:PRISTINE_HIDE",
+      "mmoitems:SALT",
+      "mmoitems:PEPPER"
+  );
+
+  /**
+   * These are items that have a different name in the tooltip than in the item name. There will probably be more
+   * that will be discovered over time (but hopefully not too many).
+   */
+  private static final Map<String, String> ITEM_TO_TOOLTIP = Map.of(
+      "Rabbit's Foot", "Rabbit Foot",
+      "Jack o'Lantern", "Jack O Lantern",
+      "Lily of the Valley", "Lily Of The Valley",
+      "Redstone Dust", "Redstone",
+      "Block of Amethyst", "Amethyst Block",
+      "Slimeball", "Slime Ball"
   );
 
   public static String getKey(ItemStack itemStack) {
@@ -43,6 +61,16 @@ public class ItemUtil {
     }
 
     return key;
+  }
+
+  public static String getName(ItemStack itemStack, boolean mapToTooltip) {
+    String name = ItemUtil.getName(itemStack);
+
+    if (mapToTooltip) {
+      name = ITEM_TO_TOOLTIP.getOrDefault(name, name);
+    }
+
+    return name;
   }
 
   public static String getName(ItemStack itemStack) {
@@ -133,6 +161,49 @@ public class ItemUtil {
         if (ItemUtil.getKey(stack).equals(key)) {
           return true;
         }
+      }
+    }
+
+    return false;
+  }
+
+  public static boolean isOutdated(JournalEntry entry, CraftingStationItem expected) {
+    if (expected.getOutdated() != null) {
+      return expected.getOutdated();
+    }
+
+    // Item revision ID is different
+    Optional<Integer> slotRevId = ItemUtil.getRevisionId(expected.getItem());
+    if (slotRevId.isPresent() && slotRevId.get() != entry.getRevisionId()) {
+      return true;
+    }
+
+    // Different amount of ingredients
+    if (entry.getIngredients().size() != expected.getExpectedIngredients().size()) {
+      return true;
+    }
+
+    // TODO: Same amount of ingredients, but different ingredients
+    for (String key : entry.getIngredients().keySet()) {
+      ItemStack stack = Journal.INSTANCE.getKnownItem(key);
+      if (stack == null) {
+        BlockgameJournal.LOGGER.warn("[Blockgame Journal] Ingredient not known: {} - {}", key, expected.getItem());
+        break;
+      }
+
+      // The ingredient is not in the entry
+      String itemName = ItemUtil.getName(stack, true);
+      if (!expected.getExpectedIngredients().containsKey(itemName)) {
+        BlockgameJournal.LOGGER.warn("[Blockgame Journal] Ingredient not expected: {} - {}", itemName, expected.getItem());
+        return true;
+      }
+
+      // The ingredient amount is different
+      int expectedAmount = expected.getExpectedIngredients().get(itemName);
+      int actualAmount = entry.getIngredients().get(key);
+      if (expectedAmount != actualAmount) {
+        BlockgameJournal.LOGGER.warn("[Blockgame Journal] Ingredient amount mismatch: {} (expected: {}, actual: {}) - {}", key, expectedAmount, actualAmount, expected.getItem());
+        return true;
       }
     }
 

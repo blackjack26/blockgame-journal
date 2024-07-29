@@ -21,6 +21,7 @@ public final class NPCNames {
     NAMES.put("Chef Ken", new NPCName("Ken", "Chef"));
     NAMES.put("Chef Sue", new NPCName("Sue", "Chef"));
     NAMES.put("Chef Nugget", new NPCName("Nugget", "Chef"));
+    NAMES.put("Chef Axe L. Adle", new NPCName("Axe L. Adle", "Chef"));
     NAMES.put("Jam Master", new NPCName("Jam Master", null));
     NAMES.put("Baelin", new NPCName("Baelin", "Fisherman"));
     NAMES.put("Franky", new NPCName("Franky", "Fisherman"));

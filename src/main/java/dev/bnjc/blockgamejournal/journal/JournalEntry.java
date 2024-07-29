@@ -30,14 +30,16 @@ public final class JournalEntry {
               Codec.STRING.orElse("").fieldOf("requiredClass").forGetter(JournalEntry::getRequiredClass),
               Codec.INT.orElse(-1).fieldOf("requiredLevel").forGetter(JournalEntry::getRequiredLevel),
               Codec.BOOL.optionalFieldOf("favorite", false).forGetter(JournalEntry::isFavorite),
+              Codec.BOOL.optionalFieldOf("tracked", false).forGetter(JournalEntry::isTracked),
               Codec.BOOL.optionalFieldOf("unavailable", false).forGetter(JournalEntry::isUnavailable)
-          ).apply(instance, (key, count, revisionId, ingredients, npcName, slot, storedAt, recipeKnown, cost, requiredClass, requiredLevel, favorite, unavailable) -> {
+          ).apply(instance, (key, count, revisionId, ingredients, npcName, slot, storedAt, recipeKnown, cost, requiredClass, requiredLevel, favorite, tracked, unavailable) -> {
             JournalEntry entry = new JournalEntry(key, count, revisionId, ingredients, npcName, slot, storedAt);
             entry.setRecipeKnown(recipeKnown);
             entry.setCost(cost);
             entry.setRequiredClass(requiredClass);
             entry.setRequiredLevel(requiredLevel);
             entry.setFavorite(favorite);
+            entry.setTracked(tracked);
             entry.setUnavailable(unavailable);
             return entry;
           })
@@ -109,6 +111,9 @@ public final class JournalEntry {
   private boolean favorite;
 
   @Setter
+  private boolean tracked;
+
+  @Setter
   private boolean unavailable;
 
   private ItemStack knownItem;
@@ -132,6 +137,7 @@ public final class JournalEntry {
     this.requiredLevel = -1;
 
     this.favorite = false;
+    this.tracked = false;
     this.unavailable = false;
   }
 

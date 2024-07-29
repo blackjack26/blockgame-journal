@@ -4,9 +4,7 @@
   "version": "${version}",
   "name": "Blockgame Journal",
   "description": "(Unofficial) Adds client-side helpers for Blockgame to journal experiences as the player encounters them",
-  "authors": [
-    "bnjc"
-  ],
+  "authors": ["bnjc"],
   "contact": {
     "repo": "https://github.com/blackjack26/blockgame-journal",
     "sources": "https://github.com/blackjack26/blockgame-journal",

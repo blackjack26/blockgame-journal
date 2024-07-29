@@ -315,12 +315,13 @@ public class RecipeWidget extends ClickableWidget {
     for (ItemStack item : entry.getIngredientItems()) {
       String itemKey = ItemUtil.getKey(item);
       int startY = this.lastY;
+      int neededCount = this.inventory.neededCount(item);
+      boolean hasEnough = neededCount <= 0;
 
       // Render item
       context.drawItem(item, x, this.lastY);
 
       // Render text
-      boolean hasEnough = this.inventory.hasEnough(item);
       MutableText text = Text.literal(hasEnough ? "✔ " : "✖ ").formatted(hasEnough ? Formatting.DARK_GREEN : Formatting.DARK_RED);
       MutableText itemText = Text.literal(ItemUtil.getName(item)).formatted(Formatting.DARK_GRAY);
 
@@ -330,7 +331,9 @@ public class RecipeWidget extends ClickableWidget {
       text.append(itemText);
 
       if (item.getCount() > 1) {
-        text.append(Text.literal(" x" + item.getCount()).formatted(Formatting.DARK_GRAY));
+        MutableText countText = Text.literal(" x" + item.getCount());
+        countText.setStyle(countText.getStyle().withColor(0x8A8A8A));
+        text.append(countText);
       }
 
       List<OrderedText> lines = this.textRenderer.wrapLines(text, this.getWidth() - 20);

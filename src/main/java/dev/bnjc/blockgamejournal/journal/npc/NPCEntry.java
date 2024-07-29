@@ -7,7 +7,7 @@ import lombok.Getter;
 import lombok.Setter;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.entity.Entity;
-import net.minecraft.entity.passive.ChickenEntity;
+import net.minecraft.entity.EntityType;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.nbt.NbtCompound;
 import net.minecraft.nbt.NbtHelper;
@@ -39,14 +39,14 @@ public class NPCEntry {
             return Optional.of(entry.getWorld());
           }),
           Codec.STRING.optionalFieldOf("className").forGetter(entry -> {
-            if (entry.getClassName() == null) {
+            if (entry.getEntityType() == null) {
               return Optional.empty();
             }
-            return Optional.of(entry.getClassName());
+            return Optional.of(entry.getEntityType());
           })
       ).apply(instance, (name, gameProfile, position, world, className) -> {
         NPCEntry entry = new NPCEntry(name, gameProfile, position.orElse(null), world.orElse(null));
-        entry.className = className.orElse("PlayerEntity");
+        entry.entityType = className.orElse(EntityType.getId(EntityType.PLAYER).toString());
         return entry;
       })
   );
@@ -55,7 +55,7 @@ public class NPCEntry {
   private final GameProfile gameProfile;
   private final @Nullable BlockPos position;
   private final @Nullable String world;
-  private String className;
+  private String entityType;
 
   @Setter
   private boolean locating;
@@ -67,7 +67,7 @@ public class NPCEntry {
     this.world = world;
 
     this.locating = false;
-    this.className = "PlayerEntity";
+    this.entityType = EntityType.getId(EntityType.PLAYER).toString();
   }
 
   public static NPCEntry of(Entity entity) {
@@ -84,12 +84,7 @@ public class NPCEntry {
 
     GameProfile profile = new GameProfile(entity.getUuid(), name);
     NPCEntry entry = new NPCEntry(name, profile, entity.getBlockPos(), world);
-
-    if (entity instanceof ChickenEntity) {
-      entry.className = "ChickenEntity";
-    } else {
-      entry.className = "Unknown::" + entity.getClass().getSimpleName();
-    }
+    entry.entityType = EntityType.getId(entity.getType()).toString();
     return entry;
   }
 

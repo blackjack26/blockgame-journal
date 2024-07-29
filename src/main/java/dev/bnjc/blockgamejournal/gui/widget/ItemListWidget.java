@@ -103,18 +103,20 @@ public class ItemListWidget extends ClickableWidget {
       item = items.get(index).getStack();
     }
 
-    BlockgameJournal.LOGGER.info("Clicked item: {}, Slot: {}", item, index);
+    BlockgameJournal.LOGGER.debug("Clicked item: {}, Slot: {}", item, index);
 
     if (item != null) {
       if (this.mode == JournalMode.Type.ITEM_SEARCH) {
         // Open RecipeDisplay screen
         MinecraftClient.getInstance().setScreen(new RecipeScreen(item, this.parent));
-      } else if (this.mode == JournalMode.Type.FAVORITES) {
+      }
+      else if (this.mode == JournalMode.Type.FAVORITES) {
         RecipeScreen recipeScreen = new RecipeScreen(item, this.parent);
         recipeScreen.filterEntries(JournalEntry::isFavorite);
 
         MinecraftClient.getInstance().setScreen(recipeScreen);
-      } else if (this.mode == JournalMode.Type.NPC_SEARCH) {
+      }
+      else if (this.mode == JournalMode.Type.NPC_SEARCH) {
         if (item.getItem() instanceof PlayerHeadItem || item.getItem() instanceof SpawnEggItem) {
           if (this.parent instanceof JournalScreen journalScreen && item.hasNbt()) {
             journalScreen.setSelectedNpc(item.getNbt().getString(Journal.NPC_NAME_KEY));
@@ -136,6 +138,24 @@ public class ItemListWidget extends ClickableWidget {
             }
 
             return isNpc;
+          });
+
+          MinecraftClient.getInstance().setScreen(recipeScreen);
+        }
+      }
+      else if (this.mode == JournalMode.Type.INGREDIENT_SEARCH) {
+        if (this.parent instanceof JournalScreen journalScreen && JournalScreen.getSelectedIngredient() == null) {
+          journalScreen.setSelectedIngredient(item);
+        } else {
+          RecipeScreen recipeScreen = new RecipeScreen(item, this.parent);
+          recipeScreen.filterEntries(entry -> {
+            if (JournalScreen.getSelectedIngredient() == null) {
+              // If no ingredient is selected, show all recipes
+              return true;
+            }
+
+            // Only show recipes that use the selected ingredient
+            return entry.getIngredients().containsKey(ItemUtil.getKey(JournalScreen.getSelectedIngredient()));
           });
 
           MinecraftClient.getInstance().setScreen(recipeScreen);
@@ -255,6 +275,17 @@ public class ItemListWidget extends ClickableWidget {
         });
       }
     }
+    else if (this.mode == JournalMode.Type.ITEM_SEARCH || this.mode == JournalMode.Type.FAVORITES) {
+      if (Journal.INSTANCE != null && Journal.INSTANCE.hasJournalEntry(item)) {
+        List<JournalEntry> entries = Journal.INSTANCE.getEntries().getOrDefault(ItemUtil.getKey(item), new ArrayList<>());
+        for (JournalEntry entry : entries) {
+          if (entry.isTracked()) {
+            context.fill(x + 1, y + 1, x + GRID_SLOT_SIZE - 1, y + GRID_SLOT_SIZE - 1, 0x80_00AA00);
+            break;
+          }
+        }
+      }
+    }
 
     context.drawItem(item, x + 1, y + 1);
   }
@@ -315,11 +346,17 @@ public class ItemListWidget extends ClickableWidget {
   }
 
   private boolean useSlotPositions() {
-    return JournalScreen.getNpcItemSort() == Sort.SLOT && this.mode == JournalMode.Type.NPC_SEARCH && JournalScreen.getSelectedNpc() != null;
+    return JournalScreen.getVendorItemSort() == VendorSort.SLOT && this.mode == JournalMode.Type.NPC_SEARCH && JournalScreen.getSelectedNpc() != null;
   }
 
-  public enum Sort {
+  public enum VendorSort {
     A_TO_Z,
     SLOT,
+  }
+
+  public enum ItemSort {
+    NONE,
+    A_TO_Z,
+    Z_TO_A,
   }
 }

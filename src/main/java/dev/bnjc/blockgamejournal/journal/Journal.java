@@ -116,6 +116,11 @@ public class Journal {
     String key = ItemUtil.getKey(result);
 
     LOGGER.info("[Blockgame Journal] Adding entry for item {}", key);
+
+    if (result.isEmpty()) {
+      LOGGER.warn("[Blockgame Journal] Attempted to add an empty item to the journal {}", result.getItem());
+    }
+
     knownItems.put(key, result); // Add or update the known item
 
     // If the key does not exist, create a new list with the entry
@@ -125,15 +130,33 @@ public class Journal {
       return;
     }
 
-    // Otherwise, add the entry to the existing list. But first, check if an entry with the same ingredients already exists
+    // Otherwise, add the entry to the existing list. But first, check if an entry with the same ingredients or slot already exists
     List<JournalEntry> recipeEntries = entries.get(key);
     JournalEntry existingEntry = recipeEntries
         .stream()
-        .filter(e -> e.getIngredients().equals(entry.getIngredients()) && e.getNpcName().equals(entry.getNpcName()))
+        .filter(e -> {
+          // If the NPC name is different, it's a different recipe
+          if (!e.getNpcName().equals(entry.getNpcName())) {
+            return false;
+          }
+
+          // If the ingredients are the same, it's the same recipe
+          if (e.getIngredients().equals(entry.getIngredients())) {
+            LOGGER.warn("[Blockgame Journal] Entry with the same ingredients already exists, overwriting...");
+            return true;
+          }
+
+          // If the slot is the same, it's the same recipe (but with different ingredients)
+          if (e.getSlot() == entry.getSlot()) {
+            LOGGER.warn("[Blockgame Journal] Entry with the same slot already exists, overwriting...");
+            return true;
+          }
+
+          return false;
+        })
         .findFirst()
         .orElse(null);
     if (existingEntry != null) {
-      LOGGER.warn("[Blockgame Journal] Entry with the same ingredients already exists, overwriting...");
       recipeEntries.set(recipeEntries.indexOf(existingEntry), entry);
       return;
     }
@@ -147,7 +170,13 @@ public class Journal {
     if (key.startsWith("minecraft:")) {
       return new ItemStack(Registries.ITEM.get(new Identifier(key)));
     }
-    return knownItems.get(key);
+
+    ItemStack item = knownItems.get(key);
+    if (item == null) {
+      return null;
+    }
+
+    return item.copy();
   }
 
   public Optional<NPCEntry> getKnownNpc(String npcName) {

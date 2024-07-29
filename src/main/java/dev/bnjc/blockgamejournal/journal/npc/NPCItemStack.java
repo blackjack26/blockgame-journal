@@ -3,11 +3,11 @@ package dev.bnjc.blockgamejournal.journal.npc;
 import com.mojang.authlib.GameProfile;
 import dev.bnjc.blockgamejournal.journal.Journal;
 import lombok.Getter;
-import net.minecraft.entity.passive.ChickenEntity;
-import net.minecraft.entity.player.PlayerEntity;
+import net.minecraft.entity.EntityType;
 import net.minecraft.item.ItemStack;
 import net.minecraft.item.Items;
 import net.minecraft.item.PlayerHeadItem;
+import net.minecraft.item.SpawnEggItem;
 import net.minecraft.nbt.NbtCompound;
 import net.minecraft.nbt.NbtHelper;
 import net.minecraft.nbt.NbtList;
@@ -17,6 +17,7 @@ import net.minecraft.text.Text;
 import net.minecraft.util.Formatting;
 import org.jetbrains.annotations.NotNull;
 
+import javax.swing.text.html.Option;
 import java.util.Optional;
 
 @Getter
@@ -46,17 +47,28 @@ public class NPCItemStack {
     }
 
     NPCEntry entry = maybeEntry.get();
-    ItemStack stack = null;
+    ItemStack stack;
 
-    if (entry.getClassName().equals("PlayerEntity")) {
+    if (entry.getEntityType().equals("PlayerEntity") || // Legacy
+        entry.getEntityType().equals(EntityType.getId(EntityType.PLAYER).toString())) {
       stack = new ItemStack(Items.PLAYER_HEAD);
-    } else if (entry.getClassName().equals("ChickenEntity")) {
+    } else if (entry.getEntityType().equals("ChickenEntity")) { // Legacy
       stack = new ItemStack(Items.CHICKEN_SPAWN_EGG);
+    } else {
+      // Create a spawn egg for the entity type
+      Optional<EntityType<?>> entityType = EntityType.get(entry.getEntityType());
+      if (entityType.isEmpty()) {
+        return Optional.empty();
+      }
+
+      SpawnEggItem eggItem = SpawnEggItem.forEntity(entityType.get());
+      if (eggItem == null) {
+        return Optional.empty();
+      }
+
+      stack = new ItemStack(eggItem);
     }
 
-    if (stack == null) {
-      return Optional.empty();
-    }
     return Optional.of(new NPCItemStack(npcName, entry, stack));
   }
 

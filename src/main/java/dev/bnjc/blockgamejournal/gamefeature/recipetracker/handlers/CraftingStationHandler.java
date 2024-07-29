@@ -46,7 +46,7 @@ public class CraftingStationHandler {
   private static final Pattern INGREDIENT_PATTERN = Pattern.compile("([✔✖]) (\\d+) (.+?)$");
 
   private final RecipeTrackerGameFeature gameFeature;
-  private final List<ItemStack> inventory = new ArrayList<>();
+  private final List<CraftingStationItem> inventory = new ArrayList<>();
 
   private int syncId = -1;
   private String npcName = "";
@@ -110,7 +110,21 @@ public class CraftingStationHandler {
       return ActionResult.PASS;
     }
 
-    this.inventory.addAll(packet.getContents());
+    packet.getContents().forEach(item -> {
+      if (item == null || item.isEmpty()) {
+        this.inventory.add(null);
+        return;
+      }
+
+      CraftingStationItem invItem = new CraftingStationItem(item, this.inventory.size());
+      NbtList loreTag = NbtUtil.getLore(invItem.getItem());
+      if (loreTag != null) {
+        this.parseLoreMetadata(invItem, loreTag);
+      }
+
+      this.inventory.add(invItem);
+    });
+
     return ActionResult.PASS;
   }
 
@@ -124,24 +138,15 @@ public class CraftingStationHandler {
       return ActionResult.PASS;
     }
 
-    ItemStack inventoryItem = this.inventory.get(slotId);
+    CraftingStationItem inventoryItem = this.inventory.get(slotId);
 
-    if (inventoryItem == null || inventoryItem.isEmpty()) {
+    if (inventoryItem == null) {
       LOGGER.warn("[Blockgame Journal] Empty item clicked");
       this.lastClickedItem = null;
       return ActionResult.PASS;
     }
 
-    this.lastClickedItem = new CraftingStationItem(inventoryItem, slotId);
-
-    // Log the NBT data of the clicked item
-    NbtList loreTag = NbtUtil.getLore(inventoryItem);
-    if (loreTag == null) {
-      LOGGER.warn("[Blockgame Journal] No NBT lore data found");
-      return ActionResult.PASS;
-    }
-
-    this.parseLoreMetadata(loreTag);
+    this.lastClickedItem = inventoryItem;
     return ActionResult.PASS;
   }
 
@@ -171,28 +176,26 @@ public class CraftingStationHandler {
 
     // See if slot item matches inventory item
     ItemStack slotItem = slot.getStack();
-    ItemStack inventoryItem = this.inventory.get(slot.id);
-    if (slotItem == null || inventoryItem == null || slotItem.isEmpty() || inventoryItem.isEmpty()) {
+    CraftingStationItem inventoryItem = this.inventory.get(slot.id);
+    if (slotItem == null || inventoryItem == null || slotItem.isEmpty()) {
       return;
     }
 
-    if (slotItem.getItem() != inventoryItem.getItem()) {
+    if (slotItem.getItem() != inventoryItem.getItem().getItem()) {
       LOGGER.warn("[Blockgame Journal] Slot item does not match inventory item");
       return;
     }
 
-    List<JournalEntry> entries = Journal.INSTANCE.getEntries().getOrDefault(ItemUtil.getKey(inventoryItem), new ArrayList<>());
+    List<JournalEntry> entries = Journal.INSTANCE.getEntries().getOrDefault(ItemUtil.getKey(inventoryItem.getItem()), new ArrayList<>());
     for (JournalEntry entry : entries) {
       String expectedNpcName = entry.getNpcName();
       int expectedSlot = entry.getSlot();
 
-      // If the item is in the journal, don't highlight it
+      // If the item is in the journal, don't highlight it unless it's outdated
       if (this.npcName.equals(expectedNpcName) && slot.id == expectedSlot) {
-        if (highlightOutdated) {
-          Optional<Integer> slotRevId = ItemUtil.getRevisionId(slotItem);
-          if (slotRevId.isPresent() && slotRevId.get() != entry.getRevisionId()) {
-            this.highlightSlot(context, slot, 0x30CCCC00);
-          }
+        inventoryItem.setOutdated(ItemUtil.isOutdated(entry, inventoryItem));
+        if (highlightOutdated && inventoryItem.getOutdated()) {
+          this.highlightSlot(context, slot, 0x40CCCC00);
         }
         return;
       }
@@ -206,14 +209,15 @@ public class CraftingStationHandler {
 
   private void highlightSlot(DrawContext context, Slot slot, int color) {
     context.fill(slot.x, slot.y, slot.x + 16, slot.y + 16, color);
+    context.drawBorder(slot.x, slot.y,  16, 16, color | 0xBB000000);
   }
 
   /**
    * Parses the metadata from the clicked item's lore. This includes the coin cost, recipe known status, class
    * requirement, and expected ingredients.
    */
-  private void parseLoreMetadata(NbtList loreTag) {
-    if (this.lastClickedItem == null) {
+  private void parseLoreMetadata(@Nullable CraftingStationItem item, NbtList loreTag) {
+    if (item == null) {
       LOGGER.warn("[Blockgame Journal] No last clicked item found");
       return;
     }
@@ -238,7 +242,7 @@ public class CraftingStationHandler {
         Matcher ingredientMatcher = INGREDIENT_PATTERN.matcher(lore);
         if (ingredientMatcher.find()) {
           String name = ingredientMatcher.group(3);
-          this.lastClickedItem.addExpectedIngredient(name, Integer.parseInt(ingredientMatcher.group(2)));
+          item.addExpectedIngredient(name, Integer.parseInt(ingredientMatcher.group(2)));
           continue;
         }
 
@@ -253,22 +257,22 @@ public class CraftingStationHandler {
         // Check for coin cost
         Matcher coinMatcher = COIN_PATTERN.matcher(lore);
         if (coinMatcher.find()) {
-          this.lastClickedItem.setCost(Float.parseFloat(coinMatcher.group(2)));
+          item.setCost(Float.parseFloat(coinMatcher.group(2)));
           continue;
         }
 
         // Check for recipe known
         Matcher knowledgeMatcher = KNOWLEDGE_PATTERN.matcher(lore);
         if (knowledgeMatcher.find()) {
-          this.lastClickedItem.setRecipeKnown("✔".equals(knowledgeMatcher.group(1)) ? (byte) 1 : (byte) 0);
+          item.setRecipeKnown("✔".equals(knowledgeMatcher.group(1)) ? (byte) 1 : (byte) 0);
           continue;
         }
 
         // Check for class requirement
         Matcher classMatcher = CLASS_PATTERN.matcher(lore);
         if (classMatcher.find()) {
-          this.lastClickedItem.setRequiredLevel(Integer.parseInt(classMatcher.group(2)));
-          this.lastClickedItem.setRequiredClass(classMatcher.group(3));
+          item.setRequiredLevel(Integer.parseInt(classMatcher.group(2)));
+          item.setRequiredClass(classMatcher.group(3));
           continue;
         }
 

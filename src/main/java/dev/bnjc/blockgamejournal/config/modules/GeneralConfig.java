@@ -20,12 +20,12 @@ public class GeneralConfig implements ConfigData {
 
   @ConfigEntry.Gui.Tooltip
   @ConfigEntry.Gui.EnumHandler(option = ConfigEntry.Gui.EnumHandler.EnumDisplayOption.BUTTON)
-  public ItemListWidget.Sort defaultNpcSort;
+  public ItemListWidget.VendorSort defaultNpcSort;
 
   public GeneralConfig() {
     highlightMissingRecipes = true;
     highlightOutdatedRecipes = true;
     defaultMode = JournalMode.Type.ITEM_SEARCH;
-    defaultNpcSort = ItemListWidget.Sort.A_TO_Z;
+    defaultNpcSort = ItemListWidget.VendorSort.A_TO_Z;
   }
 }

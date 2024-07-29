@@ -19,7 +19,9 @@ import net.minecraft.client.gui.tooltip.Tooltip;
 import net.minecraft.client.gui.widget.TexturedButtonWidget;
 import net.minecraft.item.ItemStack;
 import net.minecraft.recipe.RecipeEntry;
+import net.minecraft.text.MutableText;
 import net.minecraft.text.Text;
+import net.minecraft.util.Formatting;
 import net.minecraft.util.Identifier;
 import org.jetbrains.annotations.Nullable;
 
@@ -50,6 +52,8 @@ public class RecipeScreen extends Screen {
   private TexturedButtonWidget decomposeButton;
   private TexturedButtonWidget favoriteButton;
   private TexturedButtonWidget unfavoriteButton;
+  private TexturedButtonWidget trackButton;
+  private TexturedButtonWidget untrackButton;
   private NPCWidget npcWidget;
 
   public RecipeScreen(String key, Screen parent) {
@@ -232,6 +236,60 @@ public class RecipeScreen extends Screen {
     this.unfavoriteButton.visible = currentEntry.isFavorite();
     this.addDrawableChild(this.unfavoriteButton);
 
+    // Track button
+    this.trackButton = new TexturedButtonWidget(
+        this.decomposeButton.visible ? this.decomposeButton.getX() - 2 * (3 + BUTTON_SIZE) : this.decomposeButton.getX() - (3 + BUTTON_SIZE),
+        this.top + 5,
+        12,
+        12,
+        new ButtonTextures(GuiUtil.sprite("widgets/locate/button"), GuiUtil.sprite("widgets/locate/button_highlighted")),
+        button -> {
+          if (Journal.INSTANCE == null) {
+            return;
+          }
+
+          JournalEntry entry = this.entries.get(this.page);
+          entry.setTracked(true);
+
+          JournalScreen js = this.getJournalScreen();
+          if (js != null) {
+            js.refreshTracking();
+          }
+
+          this.updateButtons();
+        }
+    );
+    this.trackButton.setTooltip(Tooltip.of(Text.translatable("blockgamejournal.track_recipe")));
+    this.trackButton.visible = !currentEntry.isTracked();
+    this.addDrawableChild(this.trackButton);
+
+    // Untrack button
+    this.untrackButton = new TexturedButtonWidget(
+        this.decomposeButton.visible ? this.decomposeButton.getX() - 2 * (3 + BUTTON_SIZE) : this.decomposeButton.getX() - (3 + BUTTON_SIZE),
+        this.top + 5,
+        12,
+        12,
+        new ButtonTextures(GuiUtil.sprite("widgets/stop_locate/button"), GuiUtil.sprite("widgets/stop_locate/button_highlighted")),
+        button -> {
+          if (Journal.INSTANCE == null) {
+            return;
+          }
+
+          JournalEntry entry = this.entries.get(this.page);
+          entry.setTracked(false);
+
+          JournalScreen js = this.getJournalScreen();
+          if (js != null) {
+            js.refreshTracking();
+          }
+
+          this.updateButtons();
+        }
+    );
+    this.untrackButton.setTooltip(Tooltip.of(Text.translatable("blockgamejournal.untrack_recipe")));
+    this.untrackButton.visible = currentEntry.isTracked();
+    this.addDrawableChild(this.untrackButton);
+
     // NPC Widget
     this.npcWidget = new NPCWidget(null, this.left + MENU_WIDTH + 4, this.top, 68, 74);
     this.addDrawableChild(this.npcWidget);
@@ -239,7 +297,26 @@ public class RecipeScreen extends Screen {
       this.npcWidget.setEntity(JournalScreen.getSelectedNpc());
     }
 
+    // Tracking widget
+    JournalScreen js = this.getJournalScreen();
+    if (js != null) {
+      this.addDrawableChild(js.getTrackingWidget());
+    }
+
     this.goToPage(this.page);
+  }
+
+  private @Nullable JournalScreen getJournalScreen() {
+    Screen p = this.parent;
+    while (p instanceof RecipeScreen rs) {
+      p = rs.getParent();
+    }
+
+    if (p instanceof JournalScreen journalScreen) {
+      return journalScreen;
+    }
+
+    return null;
   }
 
   @Override
@@ -288,10 +365,14 @@ public class RecipeScreen extends Screen {
     this.decomposeButton.visible = this.hasDecomposableIngredients();
     this.favoriteButton.visible = !this.entries.get(this.page).isFavorite();
     this.unfavoriteButton.visible = !this.favoriteButton.visible;
+    this.trackButton.visible = !this.entries.get(this.page).isTracked();
+    this.untrackButton.visible = !this.trackButton.visible;
 
     int favX = this.decomposeButton.visible ? this.decomposeButton.getX() - (3 + BUTTON_SIZE) : this.decomposeButton.getX();
     this.favoriteButton.setX(favX);
     this.unfavoriteButton.setX(favX);
+    this.trackButton.setX(favX - (3 + BUTTON_SIZE));
+    this.untrackButton.setX(favX - (3 + BUTTON_SIZE));
   }
 
   private boolean hasDecomposableIngredients() {

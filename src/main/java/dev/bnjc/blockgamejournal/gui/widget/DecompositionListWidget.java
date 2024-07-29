@@ -168,7 +168,7 @@ public class DecompositionListWidget extends ScrollableViewWidget {
       context.drawItem(item, x, this.lastY);
 
       // Render text
-      boolean hasEnough = this.inventory.hasEnough(item);
+      boolean hasEnough = this.inventory.neededCount(item) <= 0;
 
       // TODO: Vanilla recipe display?
 
@@ -177,7 +177,9 @@ public class DecompositionListWidget extends ScrollableViewWidget {
       text.append(itemText);
 
       if (item.getCount() > 1) {
-        text.append(Text.literal(" x" + item.getCount()).formatted(Formatting.DARK_GRAY));
+        MutableText countText = Text.literal(" x" + item.getCount());
+        countText.setStyle(countText.getStyle().withColor(0x8A8A8A));
+        text.append(countText);
       }
 
       this.lastY = GuiUtil.drawMultiLineText(context, this.textRenderer, x + 20, this.lastY, text, this.getWidth() - 20);

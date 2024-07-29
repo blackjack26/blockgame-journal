@@ -24,6 +24,9 @@ public class CraftingStationItem {
   @Setter
   private int requiredLevel = -1;
 
+  @Setter
+  private Boolean outdated = null;
+
   /**
    * This is used specifically for spot checking the ingredients of a recipe. We don't get the actual item stack here
    * but rather just a string representation formatted like "48 Amethyst Shard" where 48 is the amount of the item.

@@ -84,6 +84,16 @@ public class DecompositionScreen extends Screen {
       NPCWidget npcWidget = new NPCWidget(JournalScreen.getSelectedNpc(), this.left + MENU_WIDTH + 4, this.top, 68, 74);
       this.addDrawableChild(npcWidget);
     }
+
+    // Tracking widget
+    Screen p = this.parent;
+    while (p instanceof RecipeScreen rs) {
+      p = rs.getParent();
+    }
+
+    if (p instanceof JournalScreen journalScreen) {
+      this.addDrawableChild(journalScreen.getTrackingWidget());
+    }
   }
 
   @Override

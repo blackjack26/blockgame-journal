@@ -148,6 +148,7 @@ public class RecipePreviewHandler {
       ItemStack item = slot.getStack();
       if (item.getItem() instanceof PlayerHeadItem) {
         context.fill(slot.x, slot.y, slot.x + 16, slot.y + 16, 0x30FF0000);
+        context.drawBorder(slot.x, slot.y, 16, 16, 0xBBFF0000);
         context.getMatrices().push();
         context.getMatrices().translate(0.0f, 0.0f, 200.0f);
         context.drawText(
@@ -306,20 +307,23 @@ public class RecipePreviewHandler {
 //      ItemStack stack = Journal.INSTANCE.getKnownItem(key);
 //      if (stack == null) {
 //        BlockgameJournal.LOGGER.warn("[Blockgame Journal] Ingredient not known: {}", key);
-//        return false;
+////        return false;
+//        break;
 //      }
 //
 //      String itemName = ItemUtil.getName(stack);
 //      if (!item.getExpectedIngredients().containsKey(itemName)) {
 //        BlockgameJournal.LOGGER.warn("[Blockgame Journal] Ingredient not expected: {}", itemName);
-//        return false;
+////        return false;
+//        break;
 //      }
 //
 //      int expectedAmount = item.getExpectedIngredients().get(itemName);
 //      int actualAmount = entry.getIngredients().get(key);
 //      if (expectedAmount != actualAmount) {
 //        BlockgameJournal.LOGGER.warn("[Blockgame Journal] Ingredient amount mismatch: {} (expected: {}, actual: {})", key, expectedAmount, actualAmount);
-//        return false;
+////        return false;
+//        break;
 //      }
 //    }
 

@@ -3,7 +3,6 @@ package dev.bnjc.blockgamejournal.util;
 import java.nio.file.Path;
 
 public class StringUtil {
-
   /**
    * Formats a Path into a string with a '/' separator.
    */
