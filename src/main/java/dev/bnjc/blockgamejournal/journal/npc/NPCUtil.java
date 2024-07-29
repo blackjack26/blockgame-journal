@@ -1,15 +1,13 @@
 package dev.bnjc.blockgamejournal.journal.npc;
 
 import dev.bnjc.blockgamejournal.journal.Journal;
-import net.minecraft.entity.player.PlayerEntity;
+import net.minecraft.entity.Entity;
 
-import java.util.ArrayList;
 import java.util.HashSet;
-import java.util.List;
 import java.util.Set;
 
 public final class NPCUtil {
-  public static void createOrUpdate(String name, PlayerEntity entity) {
+  public static void createOrUpdate(String name, Entity entity) {
     if (Journal.INSTANCE == null) {
       return;
     }

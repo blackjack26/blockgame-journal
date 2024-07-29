@@ -17,6 +17,7 @@ import lombok.Getter;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.network.ClientPlayerEntity;
+import net.minecraft.entity.Entity;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.item.ItemStack;
 import net.minecraft.nbt.NbtList;
@@ -70,16 +71,26 @@ public class CraftingStationHandler {
 
     // Look for screen name "Some Name (#page#/#max#)" - exclude "Party" from the name
     Matcher matcher = Pattern.compile("^((?!Party)[\\w\\s]+)\\s\\(\\d+/\\d+\\)").matcher(screenName);
-    PlayerEntity lastAttackedPlayer = this.gameFeature.getLastAttackedPlayer();
-    if (matcher.find() ||
-        (lastAttackedPlayer != null && screenName.equals(lastAttackedPlayer.getEntityName()))) {
+    Entity lastAttackedEntity = this.gameFeature.getLastAttackedEntity();
+
+    String entityName = "";
+    if (lastAttackedEntity != null) {
+      entityName = lastAttackedEntity.getEntityName();
+
+      // Only use custom name if the entity is not a player
+      if (!(lastAttackedEntity instanceof PlayerEntity) && lastAttackedEntity.hasCustomName()) {
+        entityName = lastAttackedEntity.getCustomName().getString();
+      }
+    }
+
+    if (matcher.find() || (lastAttackedEntity != null && screenName.equals(entityName))) {
       this.syncId = packet.getSyncId();
 
-      if (lastAttackedPlayer != null) {
-        this.npcName = lastAttackedPlayer.getEntityName();
+      if (lastAttackedEntity != null) {
+        this.npcName = entityName;
 
         if (Journal.INSTANCE != null) {
-          NPCUtil.createOrUpdate(this.npcName, lastAttackedPlayer);
+          NPCUtil.createOrUpdate(this.npcName, lastAttackedEntity);
         }
       } else {
         this.npcName = matcher.group(1);

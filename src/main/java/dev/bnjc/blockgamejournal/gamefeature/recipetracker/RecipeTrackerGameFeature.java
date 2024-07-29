@@ -40,6 +40,7 @@ import net.minecraft.client.util.InputUtil;
 import net.minecraft.client.util.math.MatrixStack;
 import net.minecraft.command.CommandRegistryAccess;
 import net.minecraft.entity.Entity;
+import net.minecraft.entity.passive.ChickenEntity;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.item.ItemStack;
 import net.minecraft.text.MutableText;
@@ -78,7 +79,7 @@ public class RecipeTrackerGameFeature extends GameFeature {
 
   @Getter
   @Nullable
-  private PlayerEntity lastAttackedPlayer = null;
+  private Entity lastAttackedEntity = null;
 
   @Getter
   @Nullable
@@ -243,11 +244,7 @@ public class RecipeTrackerGameFeature extends GameFeature {
   }
 
   private ActionResult handleEntityAttacked(PlayerEntity playerEntity, Entity entity) {
-    if (entity instanceof PlayerEntity) {
-      lastAttackedPlayer = (PlayerEntity) entity;
-    } else {
-      lastAttackedPlayer = null;
-    }
+    lastAttackedEntity = entity;
     return ActionResult.PASS;
   }
 

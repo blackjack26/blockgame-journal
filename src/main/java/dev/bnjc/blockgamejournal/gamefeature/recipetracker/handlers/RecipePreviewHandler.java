@@ -7,11 +7,14 @@ import dev.bnjc.blockgamejournal.journal.JournalEntry;
 import dev.bnjc.blockgamejournal.journal.JournalEntryBuilder;
 import dev.bnjc.blockgamejournal.gamefeature.recipetracker.station.CraftingStationItem;
 import dev.bnjc.blockgamejournal.listener.interaction.SlotClickedListener;
+import dev.bnjc.blockgamejournal.listener.screen.DrawSlotListener;
 import dev.bnjc.blockgamejournal.listener.screen.ScreenOpenedListener;
 import dev.bnjc.blockgamejournal.listener.screen.ScreenReceivedInventoryListener;
 import dev.bnjc.blockgamejournal.util.ItemUtil;
 import lombok.Getter;
 import lombok.Setter;
+import net.minecraft.client.MinecraftClient;
+import net.minecraft.client.gui.DrawContext;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.item.ItemStack;
 import net.minecraft.item.Items;
@@ -19,6 +22,7 @@ import net.minecraft.item.KnowledgeBookItem;
 import net.minecraft.item.PlayerHeadItem;
 import net.minecraft.network.packet.s2c.play.InventoryS2CPacket;
 import net.minecraft.network.packet.s2c.play.OpenScreenS2CPacket;
+import net.minecraft.screen.slot.Slot;
 import net.minecraft.screen.slot.SlotActionType;
 import net.minecraft.util.ActionResult;
 import org.jetbrains.annotations.Nullable;
@@ -49,6 +53,7 @@ public class RecipePreviewHandler {
 
   private boolean isLoadingNextPage = false;
   private boolean isLoadingPrevPage = false;
+  private boolean stored = false;
 
   private final List<ItemStack> ingredients = new ArrayList<>();
 
@@ -60,6 +65,7 @@ public class RecipePreviewHandler {
     ScreenOpenedListener.EVENT.register(this::handleOpenScreen);
     ScreenReceivedInventoryListener.EVENT.register(this::handleScreenInventory);
     SlotClickedListener.EVENT.register(this::handleSlotClicked);
+    DrawSlotListener.EVENT.register(this::drawSlot);
   }
 
   private ActionResult handleOpenScreen(OpenScreenS2CPacket packet) {
@@ -72,6 +78,7 @@ public class RecipePreviewHandler {
       if (!isLoadingNextPage && !isLoadingPrevPage) {
         recipePage = 0;
         ingredients.clear();
+        stored = false;
       }
 
       isLoadingNextPage = false;
@@ -131,6 +138,31 @@ public class RecipePreviewHandler {
     return ActionResult.PASS;
   }
 
+  private void drawSlot(DrawContext context, Slot slot) {
+    if (this.syncId == -1) {
+      return;
+    }
+
+    // Highlight
+    if (slot.id == NEXT_PAGE_BUTTON_INDEX && !this.stored) {
+      ItemStack item = slot.getStack();
+      if (item.getItem() instanceof PlayerHeadItem) {
+        context.fill(slot.x, slot.y, slot.x + 16, slot.y + 16, 0x30FF0000);
+        context.getMatrices().push();
+        context.getMatrices().translate(0.0f, 0.0f, 200.0f);
+        context.drawText(
+            MinecraftClient.getInstance().textRenderer,
+            "●",
+            slot.x + 18 - MinecraftClient.getInstance().textRenderer.getWidth("●"),
+            slot.y - 3,
+            0xFF3333,
+            true
+        );
+        context.getMatrices().pop();
+      }
+    }
+  }
+
   public void reset() {
     this.recipePage = 0;
     this.ingredients.clear();
@@ -148,7 +180,7 @@ public class RecipePreviewHandler {
       return;
     }
 
-    if (this.gameFeature.getLastAttackedPlayer() == null) {
+    if (this.gameFeature.getLastAttackedEntity() == null) {
       LOGGER.warn("[Blockgame Journal] No station entity to attribute the recipe to");
       return;
     }
@@ -196,7 +228,7 @@ public class RecipePreviewHandler {
       CraftingStationItem lastClickedItem = this.gameFeature.getCraftingStationHandler().getLastClickedItem();
       JournalEntry entry = new JournalEntryBuilder(
           this.ingredients,
-          this.gameFeature.getLastAttackedPlayer(),
+          this.gameFeature.getLastAttackedEntity(),
           lastClickedItem == null ? -1 : lastClickedItem.getSlot()
       ).build(recipeItem);
 
@@ -231,6 +263,7 @@ public class RecipePreviewHandler {
           BlockgameJournal.LOGGER.warn("[Blockgame Journal] No ingredients found in the recipe, and no cost was set");
         } else {
           Journal.INSTANCE.addEntry(recipeItem, entry);
+          this.stored = true;
         }
       } else {
         BlockgameJournal.LOGGER.warn("[Blockgame Journal] Recipe validation failed");

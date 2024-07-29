@@ -7,6 +7,7 @@ import lombok.Getter;
 import lombok.Setter;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.entity.Entity;
+import net.minecraft.entity.passive.ChickenEntity;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.nbt.NbtCompound;
 import net.minecraft.nbt.NbtHelper;
@@ -36,16 +37,25 @@ public class NPCEntry {
               return Optional.empty();
             }
             return Optional.of(entry.getWorld());
+          }),
+          Codec.STRING.optionalFieldOf("className").forGetter(entry -> {
+            if (entry.getClassName() == null) {
+              return Optional.empty();
+            }
+            return Optional.of(entry.getClassName());
           })
-      ).apply(instance, (name, gameProfile, position, world) ->
-          new NPCEntry(name, gameProfile, position.orElse(null), world.orElse(null))
-      )
+      ).apply(instance, (name, gameProfile, position, world, className) -> {
+        NPCEntry entry = new NPCEntry(name, gameProfile, position.orElse(null), world.orElse(null));
+        entry.className = className.orElse("PlayerEntity");
+        return entry;
+      })
   );
 
   private final String name;
   private final GameProfile gameProfile;
   private final @Nullable BlockPos position;
   private final @Nullable String world;
+  private String className;
 
   @Setter
   private boolean locating;
@@ -57,11 +67,30 @@ public class NPCEntry {
     this.world = world;
 
     this.locating = false;
+    this.className = "PlayerEntity";
   }
 
-  public static NPCEntry of(PlayerEntity entity) {
+  public static NPCEntry of(Entity entity) {
     String world = entity.getEntityWorld().getRegistryKey().getValue().toString();
-    return new NPCEntry(entity.getEntityName(), entity.getGameProfile(), entity.getBlockPos(), world);
+    if (entity instanceof PlayerEntity) {
+      return new NPCEntry(entity.getEntityName(), ((PlayerEntity)entity).getGameProfile(), entity.getBlockPos(), world);
+    }
+
+    // Create a new GameProfile with the entity's UUID and name
+    String name = entity.getEntityName();
+    if (entity.hasCustomName()) {
+      name = entity.getCustomName().getString();
+    }
+
+    GameProfile profile = new GameProfile(entity.getUuid(), name);
+    NPCEntry entry = new NPCEntry(name, profile, entity.getBlockPos(), world);
+
+    if (entity instanceof ChickenEntity) {
+      entry.className = "ChickenEntity";
+    } else {
+      entry.className = "Unknown::" + entity.getClass().getSimpleName();
+    }
+    return entry;
   }
 
   public static NPCEntry fromLegacy(String name, GameProfile profile) {

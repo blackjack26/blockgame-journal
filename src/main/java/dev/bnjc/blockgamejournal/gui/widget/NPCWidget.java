@@ -1,22 +1,15 @@
 package dev.bnjc.blockgamejournal.gui.widget;
 
-import dev.bnjc.blockgamejournal.BlockgameJournal;
-import dev.bnjc.blockgamejournal.gui.screen.JournalScreen;
 import dev.bnjc.blockgamejournal.journal.npc.NPCEntity;
 import dev.bnjc.blockgamejournal.util.GuiUtil;
-import lombok.Setter;
 import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.font.MultilineText;
 import net.minecraft.client.gui.DrawContext;
-import net.minecraft.client.gui.Drawable;
 import net.minecraft.client.gui.screen.ButtonTextures;
 import net.minecraft.client.gui.screen.ingame.InventoryScreen;
 import net.minecraft.client.gui.screen.narration.NarrationMessageBuilder;
 import net.minecraft.client.gui.tooltip.Tooltip;
-import net.minecraft.client.gui.widget.ButtonWidget;
 import net.minecraft.client.gui.widget.ClickableWidget;
 import net.minecraft.client.gui.widget.TexturedButtonWidget;
-import net.minecraft.client.gui.widget.Widget;
 import net.minecraft.text.MutableText;
 import net.minecraft.text.Text;
 import net.minecraft.util.Formatting;
@@ -73,7 +66,7 @@ public class NPCWidget extends ClickableWidget {
     updateButtons();
   }
 
-  public void setEntity(@Nullable  NPCEntity entity) {
+  public void setEntity(@Nullable NPCEntity entity) {
     this.entity = entity;
     updateButtons();
   }
@@ -90,7 +83,7 @@ public class NPCWidget extends ClickableWidget {
 
   @Override
   protected void renderButton(DrawContext context, int mouseX, int mouseY, float delta) {
-    if (this.entity == null) {
+    if (this.entity == null || this.entity.getEntity() == null) {
       return;
     }
 
@@ -107,7 +100,7 @@ public class NPCWidget extends ClickableWidget {
         0.5f,
         mouseX,
         mouseY,
-        this.entity
+        this.entity.getEntity()
     );
 
     // Render the NPC name

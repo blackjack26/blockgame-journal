@@ -3,6 +3,8 @@ package dev.bnjc.blockgamejournal.journal.npc;
 import com.mojang.authlib.GameProfile;
 import dev.bnjc.blockgamejournal.journal.Journal;
 import lombok.Getter;
+import net.minecraft.entity.passive.ChickenEntity;
+import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.item.ItemStack;
 import net.minecraft.item.Items;
 import net.minecraft.item.PlayerHeadItem;
@@ -44,7 +46,17 @@ public class NPCItemStack {
     }
 
     NPCEntry entry = maybeEntry.get();
-    ItemStack stack = new ItemStack(Items.PLAYER_HEAD);
+    ItemStack stack = null;
+
+    if (entry.getClassName().equals("PlayerEntity")) {
+      stack = new ItemStack(Items.PLAYER_HEAD);
+    } else if (entry.getClassName().equals("ChickenEntity")) {
+      stack = new ItemStack(Items.CHICKEN_SPAWN_EGG);
+    }
+
+    if (stack == null) {
+      return Optional.empty();
+    }
     return Optional.of(new NPCItemStack(npcName, entry, stack));
   }
 

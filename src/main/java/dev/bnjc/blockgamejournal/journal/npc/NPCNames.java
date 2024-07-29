@@ -10,9 +10,9 @@ public final class NPCNames {
   static {
     NAMES = new HashMap<>();
     NAMES.put("Alchemist", new NPCName("Nina", "Alchemist"));
-    NAMES.put("Archaeologist", new NPCName("Indy", "Archaeologist"));
+    NAMES.put("Indy", new NPCName("Indy", "Archaeologist"));
     NAMES.put("Mortimer", new NPCName("Mortimer", "Archaeologist"));
-    NAMES.put("Artificer", new NPCName("Eitri", "Artificer"));
+    NAMES.put("Eitri", new NPCName("Eitri", "Artificer"));
     NAMES.put("Blacksmith", new NPCName("Markus", "Blacksmith"));
     NAMES.put("Botanist", new NPCName("Hesha", "Botanist"));
     NAMES.put("Mint", new NPCName("Mint", "Botanist"));
@@ -20,18 +20,20 @@ public final class NPCNames {
     NAMES.put("Chef Holiday", new NPCName("Holiday", "Chef"));
     NAMES.put("Chef Ken", new NPCName("Ken", "Chef"));
     NAMES.put("Chef Sue", new NPCName("Sue", "Chef"));
+    NAMES.put("Chef Nugget", new NPCName("Nugget", "Chef"));
     NAMES.put("Jam Master", new NPCName("Jam Master", null));
     NAMES.put("Baelin", new NPCName("Baelin", "Fisherman"));
-    NAMES.put("Fisherman", new NPCName("Franky", "Fisherman"));
+    NAMES.put("Franky", new NPCName("Franky", "Fisherman"));
     NAMES.put("Guardian", new NPCName("Armand", "Guardian"));
     NAMES.put("Hunter", new NPCName("Hanzo", "Hunter"));
     NAMES.put("Leatherworker", new NPCName("Seymour", "Leatherworker"));
-    NAMES.put("Lumberjack", new NPCName("Larry", "Lumberjack"));
+    NAMES.put("Larry", new NPCName("Larry", "Lumberjack"));
     NAMES.put("Paul", new NPCName("Paul", "Lumberjack"));
+    NAMES.put("Potion Seller", new NPCName("Justin", "Potion Seller"));
     NAMES.put("Metal", new NPCName("Metal", "Golem"));
     NAMES.put("George", new NPCName("George", "Miner"));
     NAMES.put("Miner", new NPCName("Steve", "Miner"));
-    NAMES.put("Rune Carver", new NPCName("Brokkr", "Rune Carver"));
+    NAMES.put("Brokkr", new NPCName("Brokkr", "Rune Carver"));
     NAMES.put("Stonebeard", new NPCName("Stonebeard", "Rune Carver"));
     NAMES.put("Silk Weaver", new NPCName("Wendy", "Silk Weaver"));
     NAMES.put("Spellcrafter", new NPCName("Sally", "Spellcrafter"));

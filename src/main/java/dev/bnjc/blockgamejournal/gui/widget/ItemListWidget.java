@@ -13,7 +13,6 @@ import dev.bnjc.blockgamejournal.journal.npc.NPCItemStack;
 import dev.bnjc.blockgamejournal.journal.npc.NPCUtil;
 import dev.bnjc.blockgamejournal.util.GuiUtil;
 import dev.bnjc.blockgamejournal.util.ItemUtil;
-import lombok.Getter;
 import lombok.Setter;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.DrawContext;
@@ -22,6 +21,7 @@ import net.minecraft.client.gui.screen.narration.NarrationMessageBuilder;
 import net.minecraft.client.gui.widget.ClickableWidget;
 import net.minecraft.item.ItemStack;
 import net.minecraft.item.PlayerHeadItem;
+import net.minecraft.item.SpawnEggItem;
 import net.minecraft.text.Text;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.math.MathHelper;
@@ -115,7 +115,7 @@ public class ItemListWidget extends ClickableWidget {
 
         MinecraftClient.getInstance().setScreen(recipeScreen);
       } else if (this.mode == JournalMode.Type.NPC_SEARCH) {
-        if (item.getItem() instanceof PlayerHeadItem) {
+        if (item.getItem() instanceof PlayerHeadItem || item.getItem() instanceof SpawnEggItem) {
           if (this.parent instanceof JournalScreen journalScreen && item.hasNbt()) {
             journalScreen.setSelectedNpc(item.getNbt().getString(Journal.NPC_NAME_KEY));
           }
@@ -167,7 +167,8 @@ public class ItemListWidget extends ClickableWidget {
       return false;
     }
 
-    if (this.mode == JournalMode.Type.NPC_SEARCH && this.hoveredItem.getItem() instanceof PlayerHeadItem) {
+    if (this.mode == JournalMode.Type.NPC_SEARCH &&
+        (this.hoveredItem.getItem() instanceof PlayerHeadItem || this.hoveredItem.getItem() instanceof SpawnEggItem)) {
       String npcName = this.hoveredItem.getNbt().getString(Journal.NPC_NAME_KEY);
       var npcEntry = Journal.INSTANCE.getKnownNpc(npcName);
 
@@ -245,7 +246,7 @@ public class ItemListWidget extends ClickableWidget {
 
   private void renderItem(DrawContext context, ItemStack item, int x, int y) {
     if (this.mode == JournalMode.Type.NPC_SEARCH && Journal.INSTANCE != null) {
-      if (item.getItem() instanceof PlayerHeadItem) {
+      if (item.getItem() instanceof PlayerHeadItem || item.getItem() instanceof SpawnEggItem) {
         String npcName = item.getNbt().getString(Journal.NPC_NAME_KEY);
         Journal.INSTANCE.getKnownNpc(npcName).ifPresent(npc -> {
           if (npc.isLocating()) {

@@ -1,14 +1,14 @@
 package dev.bnjc.blockgamejournal.journal.npc;
 
-import com.mojang.authlib.GameProfile;
 import dev.bnjc.blockgamejournal.journal.Journal;
 import lombok.Getter;
-import net.minecraft.client.network.AbstractClientPlayerEntity;
-import net.minecraft.client.network.PlayerListEntry;
 import net.minecraft.client.world.ClientWorld;
-import org.jetbrains.annotations.Nullable;
+import net.minecraft.entity.EntityType;
+import net.minecraft.entity.LivingEntity;
+import net.minecraft.entity.passive.ChickenEntity;
+import net.minecraft.entity.player.PlayerEntity;
 
-public class NPCEntity extends AbstractClientPlayerEntity {
+public class NPCEntity {
   @Getter
   private final NPCNames.NPCName npcName;
 
@@ -21,27 +21,22 @@ public class NPCEntity extends AbstractClientPlayerEntity {
   @Getter
   private final NPCEntry npcEntry;
 
-  private PlayerListEntry playerListEntry;
+  @Getter
+  private final LivingEntity entity;
 
   public NPCEntity(ClientWorld world, String npcWorldName) {
-    super(world, Journal.INSTANCE.getKnownNPCs().get(npcWorldName).getGameProfile());
-
     this.npcEntry = Journal.INSTANCE.getKnownNPCs().get(npcWorldName);
     this.npcName = NPCNames.get(npcWorldName);
     this.npcWorldName = npcWorldName;
 
-    // Set the player model parts to all visible
-    this.getDataTracker().set(PLAYER_MODEL_PARTS, (byte) 0x7F);
-  }
-
-  @Nullable
-  @Override
-  protected PlayerListEntry getPlayerListEntry() {
-    if (this.playerListEntry == null) {
-      GameProfile gameProfile = this.getGameProfile();
-      this.playerListEntry = new PlayerListEntry(gameProfile, false);
+    if (this.npcEntry.getClassName().equals("PlayerEntity")) {
+      this.entity = new NPCPlayerEntity(world, Journal.INSTANCE.getKnownNPCs().get(npcWorldName).getGameProfile());
     }
-
-    return this.playerListEntry;
+    else if (this.npcEntry.getClassName().equals("ChickenEntity")) {
+      this.entity = new ChickenEntity(EntityType.CHICKEN, world);
+    }
+    else {
+      this.entity = null;
+    }
   }
 }
