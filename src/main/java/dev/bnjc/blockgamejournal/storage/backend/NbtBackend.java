@@ -41,6 +41,20 @@ public class NbtBackend extends FileBasedBackend {
       }
     }
 
+    if (metadata.getKnownRecipes().isEmpty()) {
+      LOGGER.info("[Blockgame Journal] Migrating known recipes to new format");
+      HashMap<String, Boolean> knownRecipes = new HashMap<>();
+      for (var entry : entries.entrySet()) {
+        for (var recipe : entry.getValue()) {
+          if (recipe.getRecipeKnown() != -1) {
+            knownRecipes.put(entry.getKey(), recipe.getRecipeKnown() == 1);
+            break;
+          }
+        }
+      }
+      metadata.setKnownRecipes(knownRecipes);
+    }
+
     return new Journal(metadata, entries, items, npcs);
   }
 

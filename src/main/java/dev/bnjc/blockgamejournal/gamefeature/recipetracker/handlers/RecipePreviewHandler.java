@@ -241,10 +241,14 @@ public class RecipePreviewHandler {
             LOGGER.debug("[Blockgame Journal] - [ ] {} Coins", cost);
           }
 
-          byte recipeKnown = lastClickedItem.getRecipeKnown();
-          entry.setRecipeKnown(recipeKnown);
-          if (recipeKnown != -1) {
-            LOGGER.debug("[Blockgame Journal] - [{}] Recipe Known", recipeKnown == 1 ? "X" : " ");
+          Boolean recipeKnown = lastClickedItem.getRecipeKnown();
+          if (recipeKnown == null) {
+            entry.setRecipeKnown((byte) -1);
+          }
+          else {
+            entry.setRecipeKnown(recipeKnown ? (byte) 1 : (byte) 0);
+            Journal.INSTANCE.getMetadata().setKnownRecipe(entry.getKey(), recipeKnown);
+            LOGGER.debug("[Blockgame Journal] - [{}] Recipe Known", recipeKnown ? "X" : " ");
           }
 
           String requiredClass = lastClickedItem.getRequiredClass();

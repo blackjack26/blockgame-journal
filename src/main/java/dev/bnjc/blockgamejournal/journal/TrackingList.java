@@ -21,7 +21,7 @@ public class TrackingList {
   private float cost;
   private Map<String, Integer> ingredients;
   private Map<String, Integer> professions;
-  private Map<String, Byte> knownRecipes;
+  private Map<String, Boolean> knownRecipes;
   private Set<String> vendorNames;
 
   public TrackingList(List<JournalEntry> entries) {
@@ -103,8 +103,9 @@ public class TrackingList {
       }
 
       // Known Recipe
-      if (entry.getRecipeKnown() != -1) {
-        this.knownRecipes.put(entry.getKey(), entry.getRecipeKnown());
+      Boolean recipeKnown = entry.recipeKnown();
+      if (recipeKnown != null) {
+        this.knownRecipes.put(entry.getKey(), recipeKnown);
       }
 
       // Ingredients
@@ -142,8 +143,9 @@ public class TrackingList {
     }
 
     // Known Recipe
-    if (entry.getRecipeKnown() != -1) {
-      this.knownRecipes.put(entry.getKey(), entry.getRecipeKnown());
+    Boolean recipeKnown = entry.recipeKnown();
+    if (recipeKnown != null) {
+      this.knownRecipes.put(entry.getKey(), recipeKnown);
     }
 
     // Ingredients

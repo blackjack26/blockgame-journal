@@ -256,15 +256,19 @@ public class RecipeWidget extends ClickableWidget {
   }
 
   private void renderRecipeKnown(DrawContext context) {
-    if (this.entry == null || this.entry.getRecipeKnown() == -1) {
+    if (this.entry == null) {
+      return;
+    }
+
+    Boolean recipeKnown = Journal.INSTANCE.getMetadata().getKnownRecipe(entry.getKey());
+    if (recipeKnown == null) {
       return;
     }
 
     int x = this.getX();
     context.drawItem(new ItemStack(Items.BOOK), x, this.lastY);
 
-    // TODO: Get player's known recipes
-    MutableText text = Text.literal(entry.getRecipeKnown() == 1 ? "✔" : "✖").formatted(entry.getRecipeKnown() == 1 ? Formatting.DARK_GREEN : Formatting.DARK_RED);
+    MutableText text = Text.literal(recipeKnown ? "✔" : "✖").formatted(recipeKnown ? Formatting.DARK_GREEN : Formatting.DARK_RED);
     text.append(Text.literal(" Recipe Known").formatted(Formatting.DARK_GRAY));
     context.drawText(textRenderer, text, x + 20, this.lastY + 4, 0x404040, false);
 

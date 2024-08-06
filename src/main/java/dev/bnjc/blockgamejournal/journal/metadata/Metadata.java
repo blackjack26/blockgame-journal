@@ -35,8 +35,25 @@ public class Metadata {
               return Optional.empty();
             }
             return Optional.of(meta.professionsLastUpdated.toEpochMilli());
-          })
-      ).apply(instance, (name, lastModified, loadedTime, playerBalance, balanceLastUpdated, professionLevels, professionLastUpdated) -> {
+          }),
+          Codec.unboundedMap(Codec.STRING, Codec.INT)
+              .xmap(HashMap::new, Function.identity())
+              .optionalFieldOf("backpackContents")
+              .forGetter(meta -> Optional.ofNullable(meta.backpackContents)),
+          Codec.LONG.optionalFieldOf("backpackLastUpdated").forGetter(meta -> {
+            if (meta.backpackLastUpdated == null) {
+              return Optional.empty();
+            }
+            return Optional.of(meta.backpackLastUpdated.toEpochMilli());
+          }),
+          Codec.unboundedMap(Codec.STRING, Codec.BOOL)
+              .xmap(HashMap::new, Function.identity())
+              .optionalFieldOf("knownRecipes")
+              .forGetter(meta -> Optional.ofNullable(meta.knownRecipes))
+      ).apply(instance, (name, lastModified, loadedTime, playerBalance, balanceLastUpdated,
+                         professionLevels, professionLastUpdated,
+                         backpackContents, backpackLastUpdated,
+                         knownRecipes) -> {
         Metadata meta = new Metadata(
             name.orElse(null),
             lastModified.map(Instant::ofEpochMilli).orElse(Instant.now()),
@@ -48,6 +65,11 @@ public class Metadata {
 
         professionLevels.ifPresent(meta::setProfessionLevels);
         professionLastUpdated.ifPresent(time -> meta.professionsLastUpdated = Instant.ofEpochMilli(time));
+
+        backpackContents.ifPresent(meta::setBackpackContents);
+        backpackLastUpdated.ifPresent(time -> meta.backpackLastUpdated = Instant.ofEpochMilli(time));
+
+        knownRecipes.ifPresent(meta::setKnownRecipes);
 
         return meta;
       })
@@ -67,6 +89,14 @@ public class Metadata {
   @Setter
   private Instant professionsLastUpdated;
 
+  @Setter
+  private HashMap<String, Integer> backpackContents;
+  @Setter
+  private Instant backpackLastUpdated;
+
+  @Setter
+  private HashMap<String, Boolean> knownRecipes;
+
   public Metadata(@Nullable String name, Instant lastModified, long loadedTime) {
     this.name = name;
     this.lastModified = lastModified;
@@ -75,6 +105,9 @@ public class Metadata {
     this.balanceLastUpdated = null;
     this.professionLevels = new HashMap<>();
     this.professionsLastUpdated = null;
+    this.backpackContents = new HashMap<>();
+    this.backpackLastUpdated = null;
+    this.knownRecipes = new HashMap<>();
   }
 
   public static Metadata blank() {
@@ -115,5 +148,18 @@ public class Metadata {
     }
 
     this.professionsLastUpdated = Instant.now();
+  }
+
+  public void setBackpack(Map<String, Integer> backpackContents) {
+    this.backpackContents = new HashMap<>(backpackContents);
+    this.backpackLastUpdated = Instant.now();
+  }
+
+  public void setKnownRecipe(String recipe, boolean known) {
+    this.knownRecipes.put(recipe, known);
+  }
+
+  public Boolean getKnownRecipe(String recipe) {
+    return this.knownRecipes.get(recipe);
   }
 }

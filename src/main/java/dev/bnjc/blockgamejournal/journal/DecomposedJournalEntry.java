@@ -26,7 +26,7 @@ public class DecomposedJournalEntry {
   private Map<String, Integer> leftovers;
   private Set<String> npcNames;
   private Map<String, Integer> professions;
-  private Map<String, Byte> knownRecipes;
+  private Map<String, Boolean> knownRecipes;
 
   private ItemStack knownItem;
 
@@ -114,8 +114,9 @@ public class DecomposedJournalEntry {
     }
 
     // Known Recipe
-    if (entry.getRecipeKnown() != -1) {
-      decomposed.knownRecipes.put(entry.getKey(), entry.getRecipeKnown());
+    Boolean known = entry.recipeKnown();
+    if (known != null) {
+      decomposed.knownRecipes.put(entry.getKey(), known);
     }
 
     // Ingredients

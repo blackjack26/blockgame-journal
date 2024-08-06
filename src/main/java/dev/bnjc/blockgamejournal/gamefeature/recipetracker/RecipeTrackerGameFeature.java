@@ -6,6 +6,7 @@ import com.mojang.brigadier.CommandDispatcher;
 import dev.bnjc.blockgamejournal.BlockgameJournal;
 import dev.bnjc.blockgamejournal.client.BlockgameJournalClient;
 import dev.bnjc.blockgamejournal.gamefeature.GameFeature;
+import dev.bnjc.blockgamejournal.gamefeature.recipetracker.handlers.BackpackHandler;
 import dev.bnjc.blockgamejournal.gamefeature.recipetracker.handlers.CraftingStationHandler;
 import dev.bnjc.blockgamejournal.gamefeature.recipetracker.handlers.ProfileHandler;
 import dev.bnjc.blockgamejournal.gamefeature.recipetracker.handlers.RecipePreviewHandler;
@@ -14,6 +15,7 @@ import dev.bnjc.blockgamejournal.journal.Journal;
 import dev.bnjc.blockgamejournal.journal.npc.NPCEntry;
 import dev.bnjc.blockgamejournal.listener.chat.ReceiveChatListener;
 import dev.bnjc.blockgamejournal.listener.interaction.EntityAttackedListener;
+import dev.bnjc.blockgamejournal.listener.interaction.ItemInteractListener;
 import dev.bnjc.blockgamejournal.listener.renderer.PostRenderListener;
 import dev.bnjc.blockgamejournal.storage.Storage;
 import lombok.Getter;
@@ -43,10 +45,12 @@ import net.minecraft.entity.Entity;
 import net.minecraft.entity.passive.ChickenEntity;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.item.ItemStack;
+import net.minecraft.nbt.NbtCompound;
 import net.minecraft.text.MutableText;
 import net.minecraft.text.Text;
 import net.minecraft.util.ActionResult;
 import net.minecraft.util.Formatting;
+import net.minecraft.util.Hand;
 import net.minecraft.util.math.Box;
 import net.minecraft.util.math.RotationAxis;
 import net.minecraft.util.math.Vec3d;
@@ -78,6 +82,9 @@ public class RecipeTrackerGameFeature extends GameFeature {
   private final ProfileHandler profileHandler;
 
   @Getter
+  private final BackpackHandler backpackHandler;
+
+  @Getter
   @Nullable
   private Entity lastAttackedEntity = null;
 
@@ -85,10 +92,15 @@ public class RecipeTrackerGameFeature extends GameFeature {
   @Nullable
   private Screen lastScreen = null;
 
+  @Getter
+  @Nullable
+  private String lastRecipeName = null;
+
   public RecipeTrackerGameFeature() {
     this.recipePreviewHandler = new RecipePreviewHandler(this);
     this.craftingStationHandler = new CraftingStationHandler(this);
     this.profileHandler = new ProfileHandler(this);
+    this.backpackHandler = new BackpackHandler(this);
   }
 
   @Override
@@ -98,6 +110,7 @@ public class RecipeTrackerGameFeature extends GameFeature {
     ClientPlayConnectionEvents.JOIN.register(this::handleJoin);
     ClientPlayConnectionEvents.DISCONNECT.register(this::handleDisconnect);
     EntityAttackedListener.EVENT.register(this::handleEntityAttacked);
+    ItemInteractListener.EVENT.register(this::handleItemInteract);
     ClientCommandRegistrationCallback.EVENT.register(this::registerCommand);
     ScreenEvents.AFTER_INIT.register(this::handleScreenInit);
     ReceiveChatListener.EVENT.register(this::handleChatMessage);
@@ -112,6 +125,7 @@ public class RecipeTrackerGameFeature extends GameFeature {
     this.craftingStationHandler.init();
     this.recipePreviewHandler.init();
     this.profileHandler.init();
+    this.backpackHandler.init();
 
     Storage.setup();
   }
@@ -244,7 +258,11 @@ public class RecipeTrackerGameFeature extends GameFeature {
   }
 
   private ActionResult handleEntityAttacked(PlayerEntity playerEntity, Entity entity) {
-    lastAttackedEntity = entity;
+    // All vendors have custom names. This should prevent players from being marked as vendors
+    if (entity.hasCustomName()) {
+      lastAttackedEntity = entity;
+    }
+
     return ActionResult.PASS;
   }
 
@@ -253,15 +271,34 @@ public class RecipeTrackerGameFeature extends GameFeature {
       return ActionResult.PASS;
     }
 
-    if (!message.startsWith("Balance:")) {
-      return ActionResult.PASS;
-    }
+    String cleanedMessage = message.replaceAll("[§&][0-9a-f]", "");
 
     // Parse "Balance: 19,611.26$" to 19611.26
-    Matcher matcher = BALANCE_PATTERN.matcher(message);
+    Matcher matcher = BALANCE_PATTERN.matcher(cleanedMessage);
     if (matcher.find()) {
       String balanceString = matcher.group(1);
       Journal.INSTANCE.getMetadata().setPlayerBalance(Float.parseFloat(balanceString.replace(",", "")));
+      return ActionResult.PASS;
+    }
+
+    if (cleanedMessage.startsWith("[RECIPE]") && lastRecipeName != null) {
+      Journal.INSTANCE.getMetadata().setKnownRecipe("mmoitems:" + lastRecipeName, true);
+      LOGGER.info("[Blockgame Journal] Learned recipe: mmoitems:{}", lastRecipeName);
+    }
+
+    return ActionResult.PASS;
+  }
+
+  private ActionResult handleItemInteract(PlayerEntity playerEntity, Hand hand) {
+    ItemStack itemStack = playerEntity.getStackInHand(hand);
+
+    NbtCompound nbt = itemStack.getNbt();
+    if (nbt != null && nbt.contains("MMOITEMS_ITEM_TYPE") && nbt.getString("MMOITEMS_ITEM_TYPE").equals("RECIPE")) {
+      // Usually formatted like "blockgame.recipe.SANCTIFIED_BOOTS"
+      String permission = nbt.getString("MMOITEMS_PERMISSION");
+      lastRecipeName = permission.substring(permission.lastIndexOf(".") + 1);
+    } else {
+      lastRecipeName = null;
     }
 
     return ActionResult.PASS;

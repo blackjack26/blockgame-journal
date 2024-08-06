@@ -3,11 +3,11 @@
   "minVersion": "0.8",
   "package": "dev.bnjc.blockgamejournal.mixin",
   "compatibilityLevel": "JAVA_17",
-  "mixins": [],
   "client": [
-    "network.ClientPlayNetworkHandlerMixin",
-    "network.ClientPlayerInteractionManagerMixin",
     "gui.screen.HandledScreenMixin",
+    "item.ItemStackMixin",
+    "network.ClientPlayerInteractionManagerMixin",
+    "network.ClientPlayNetworkHandlerMixin",
     "renderer.WorldRendererMixin"
   ],
   "injectors": {

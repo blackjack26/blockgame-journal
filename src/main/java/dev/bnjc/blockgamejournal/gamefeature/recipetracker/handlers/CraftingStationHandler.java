@@ -264,7 +264,7 @@ public class CraftingStationHandler {
         // Check for recipe known
         Matcher knowledgeMatcher = KNOWLEDGE_PATTERN.matcher(lore);
         if (knowledgeMatcher.find()) {
-          item.setRecipeKnown("✔".equals(knowledgeMatcher.group(1)) ? (byte) 1 : (byte) 0);
+          item.setRecipeKnown("✔".equals(knowledgeMatcher.group(1)));
           continue;
         }
 

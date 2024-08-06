@@ -165,15 +165,15 @@ public class TrackingWidget extends ScrollableViewWidget {
     this.lastY += 16;
   }
 
-  private void renderRecipesKnown(DrawContext context, Map<String, Byte> knownRecipes) {
+  private void renderRecipesKnown(DrawContext context, Map<String, Boolean> knownRecipes) {
     if (knownRecipes.isEmpty()) {
       // No known recipes
       return;
     }
 
     int x = this.getX() + xOffset;
-    for (Map.Entry<String, Byte> recipe : knownRecipes.entrySet()) {
-      if (recipe.getValue() == -1 || Journal.INSTANCE == null) {
+    for (Map.Entry<String, Boolean> recipe : knownRecipes.entrySet()) {
+      if (recipe.getValue() == null|| Journal.INSTANCE == null) {
         continue;
       }
 
@@ -181,7 +181,7 @@ public class TrackingWidget extends ScrollableViewWidget {
       if (item != null) {
         context.drawItem(new ItemStack(Items.BOOK), x, this.lastY);
 
-        boolean obtained = recipe.getValue() == 1;
+        boolean obtained = recipe.getValue();
         MutableText text = Text.literal(obtained ? "✔ " : "✖ ").formatted(obtained ? Formatting.DARK_GREEN : Formatting.DARK_RED);
         MutableText recipeText = Text.literal("Recipe - " + ItemUtil.getName(item))
             .formatted(obtained ? Formatting.DARK_GRAY : Formatting.WHITE);
@@ -301,7 +301,11 @@ public class TrackingWidget extends ScrollableViewWidget {
           int quantityNeeded = (int) Math.ceil((double) reqCount / nextCount);
 
           this.renderCost(context, nextEntry.getCost() * quantityNeeded);
-          this.renderRecipesKnown(context, Map.of(nextEntry.getKey(), nextEntry.getRecipeKnown()));
+
+          Boolean recipeKnown = nextEntry.recipeKnown();
+          if (recipeKnown != null) {
+            this.renderRecipesKnown(context, Map.of(nextEntry.getKey(), recipeKnown));
+          }
           this.renderRequiredProfessions(context, Map.of(nextEntry.getRequiredClass(), nextEntry.getRequiredLevel()));
           this.renderIngredients(context, nextEntry.getIngredientItems(), ingredientKey, quantityNeeded);
         }

@@ -13,7 +13,7 @@ public class CraftingStationItem {
   private final int slot;
 
   @Setter
-  private byte recipeKnown = -1;
+  private Boolean recipeKnown = null;
 
   @Setter
   private float cost = -1;

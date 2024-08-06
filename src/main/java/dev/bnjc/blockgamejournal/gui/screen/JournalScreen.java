@@ -81,6 +81,7 @@ public class JournalScreen extends Screen {
   private VerticalScrollWidget scroll;
   @Getter
   private TrackingWidget trackingWidget;
+  private KnownRecipesWidget knownRecipesWidget;
 
   private ButtonWidget closeButton;
   private ButtonWidget itemSortButton;
@@ -113,6 +114,17 @@ public class JournalScreen extends Screen {
     this.top = (this.height - MENU_HEIGHT) / 2;
 
     super.init();
+
+    // Known Recipes
+    int knownWidth = Math.min(200, this.width - (this.left + MENU_WIDTH + 4) - 4);
+    this.knownRecipesWidget = new KnownRecipesWidget(
+        this,
+        this.width - knownWidth,
+        0,
+        knownWidth - 4,
+        this.height
+    );
+    this.addDrawableChild(this.knownRecipesWidget);
 
     // Tracking
     this.trackingWidget = new TrackingWidget(

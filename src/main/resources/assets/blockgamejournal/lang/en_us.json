@@ -48,6 +48,8 @@
   "text.autoconfig.blockgamejournal.option.decompositionConfig.decomposeVanillaItems.@Tooltip": "Whether recipes should decompose vanilla items into their components.",
   "text.autoconfig.blockgamejournal.option.decompositionConfig.partialDecomposition": "Partial Decomposition",
   "text.autoconfig.blockgamejournal.option.decompositionConfig.partialDecomposition.@Tooltip": "Whether to partially decompose items based on items in the player's inventory.",
+  "text.autoconfig.blockgamejournal.option.decompositionConfig.useBackpackItems": "Use Backpack Items",
+  "text.autoconfig.blockgamejournal.option.decompositionConfig.useBackpackItems.@Tooltip": "Whether to use items in the player's backpack for decomposition [BETA]",
   "text.autoconfig.blockgamejournal.option.storageConfig": "Storage",
   "text.autoconfig.blockgamejournal.option.storageConfig.backendType": "Storage Type",
   "text.autoconfig.blockgamejournal.option.storageConfig.backendType.@Tooltip": "The type of storage to use for the recipe journal.",

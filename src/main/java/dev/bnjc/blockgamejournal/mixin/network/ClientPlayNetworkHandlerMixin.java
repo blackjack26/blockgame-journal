@@ -3,6 +3,7 @@ package dev.bnjc.blockgamejournal.mixin.network;
 import dev.bnjc.blockgamejournal.listener.chat.ReceiveChatListener;
 import dev.bnjc.blockgamejournal.listener.screen.ScreenOpenedListener;
 import dev.bnjc.blockgamejournal.listener.screen.ScreenReceivedInventoryListener;
+import dev.bnjc.blockgamejournal.listener.screen.ScreenSlotUpdateListener;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.network.ClientPlayNetworkHandler;
 import net.minecraft.network.NetworkThreadUtils;
@@ -10,6 +11,7 @@ import net.minecraft.network.packet.c2s.play.CloseHandledScreenC2SPacket;
 import net.minecraft.network.packet.s2c.play.GameMessageS2CPacket;
 import net.minecraft.network.packet.s2c.play.InventoryS2CPacket;
 import net.minecraft.network.packet.s2c.play.OpenScreenS2CPacket;
+import net.minecraft.network.packet.s2c.play.ScreenHandlerSlotUpdateS2CPacket;
 import net.minecraft.util.ActionResult;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
@@ -48,6 +50,17 @@ public class ClientPlayNetworkHandlerMixin {
   @Inject(method = "onGameMessage", at = @At("HEAD"), cancellable = true)
   public void onGameMessage(GameMessageS2CPacket packet, CallbackInfo info) {
     ActionResult result = ReceiveChatListener.EVENT.invoker().receiveChatMessage(MinecraftClient.getInstance(), packet.content().getString());
+    if (result != ActionResult.PASS) {
+      info.cancel();
+    }
+  }
+
+  @Inject(method = "onScreenHandlerSlotUpdate", at = @At("HEAD"), cancellable = true)
+  public void onScreenHandlerSlotUpdate(ScreenHandlerSlotUpdateS2CPacket packet, CallbackInfo info) {
+    ClientPlayNetworkHandler thisHandler = (ClientPlayNetworkHandler) (Object) this;
+    NetworkThreadUtils.forceMainThread(packet, thisHandler, MinecraftClient.getInstance());
+
+    ActionResult result = ScreenSlotUpdateListener.EVENT.invoker().screenSlotUpdate(packet);
     if (result != ActionResult.PASS) {
       info.cancel();
     }

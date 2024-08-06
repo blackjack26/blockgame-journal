@@ -102,8 +102,8 @@ public class DecompositionListWidget extends ScrollableViewWidget {
       return;
     }
 
-    for (Map.Entry<String, Byte> recipe : this.entry.getKnownRecipes().entrySet()) {
-      if (recipe.getValue() == -1 || Journal.INSTANCE == null) {
+    for (Map.Entry<String, Boolean> recipe : this.entry.getKnownRecipes().entrySet()) {
+      if (Journal.INSTANCE == null) {
         continue;
       }
 
@@ -113,7 +113,7 @@ public class DecompositionListWidget extends ScrollableViewWidget {
         context.drawItem(new ItemStack(Items.BOOK), x, this.lastY);
 
         // TODO: Get player's known recipes
-        MutableText text = Text.literal(recipe.getValue() == 1 ? "✔" : "✖").formatted(recipe.getValue() == 1 ? Formatting.DARK_GREEN : Formatting.DARK_RED);
+        MutableText text = Text.literal(recipe.getValue() ? "✔" : "✖").formatted(recipe.getValue() ? Formatting.DARK_GREEN : Formatting.DARK_RED);
         text.append(Text.literal(" Recipe - " + ItemUtil.getName(item)).formatted(Formatting.DARK_GRAY));
 
         this.lastY = GuiUtil.drawMultiLineText(context, textRenderer, x + 20, this.lastY, text, this.getWidth() - 20);

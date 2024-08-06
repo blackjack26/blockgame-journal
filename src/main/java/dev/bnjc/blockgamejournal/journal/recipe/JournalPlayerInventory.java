@@ -1,5 +1,7 @@
 package dev.bnjc.blockgamejournal.journal.recipe;
 
+import dev.bnjc.blockgamejournal.BlockgameJournal;
+import dev.bnjc.blockgamejournal.journal.Journal;
 import dev.bnjc.blockgamejournal.util.ItemUtil;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.entity.player.PlayerEntity;
@@ -24,6 +26,11 @@ public class JournalPlayerInventory {
     entity.getInventory().main.forEach(this::addStack);
     entity.getInventory().armor.forEach(this::addStack);
     entity.getInventory().offHand.forEach(this::addStack);
+
+    if (BlockgameJournal.getConfig().getDecompositionConfig().useBackpackItems) {
+      Journal.INSTANCE.getMetadata().getBackpackContents().forEach(this::addStack);
+    }
+
     this.resetEditable();
   }
 
@@ -80,7 +87,15 @@ public class JournalPlayerInventory {
       a.setCount(a.getCount() + b.getCount());
       return a;
     });
+  }
 
+  private void addStack(String key, int count) {
+    ItemStack stack = Journal.INSTANCE.getKnownItem(key);
+    if (stack == null) {
+      return;
+    }
 
+    stack.setCount(count);
+    this.addStack(stack);
   }
 }

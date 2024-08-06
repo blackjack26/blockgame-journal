@@ -22,7 +22,9 @@ import net.minecraft.client.gui.widget.ClickableWidget;
 import net.minecraft.item.ItemStack;
 import net.minecraft.item.PlayerHeadItem;
 import net.minecraft.item.SpawnEggItem;
+import net.minecraft.text.MutableText;
 import net.minecraft.text.Text;
+import net.minecraft.util.Formatting;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.math.MathHelper;
 import org.jetbrains.annotations.Nullable;
@@ -172,7 +174,9 @@ public class ItemListWidget extends ClickableWidget {
 
   @Override
   protected void renderButton(DrawContext context, int mouseX, int mouseY, float delta) {
-    context.drawGuiTexture(BACKGROUND, this.getX(), this.getY(), this.getWidth(), this.getHeight());
+    if (!this.items.isEmpty()) {
+      context.drawGuiTexture(BACKGROUND, this.getX(), this.getY(), this.getWidth(), this.getHeight());
+    }
     this.renderItems(context);
     this.renderTooltip(context, mouseX, mouseY);
   }
@@ -247,6 +251,11 @@ public class ItemListWidget extends ClickableWidget {
   private void renderItems(DrawContext context) {
     List<JournalItemStack> items = this.getOffsetItems();
 
+    if (items.isEmpty()) {
+      this.renderNoItemsMessage(context);
+      return;
+    }
+
     if (this.useSlotPositions()) {
       for (JournalItemStack item : items) {
         int x = this.getX() + GRID_SLOT_SIZE * (item.getSlot() % this.gridWidth);
@@ -262,6 +271,26 @@ public class ItemListWidget extends ClickableWidget {
         }
       }
     }
+  }
+
+  private void renderNoItemsMessage(DrawContext context) {
+    Text message = Text.literal("No recipes found.").formatted(Formatting.WHITE, Formatting.BOLD);
+    int width = MinecraftClient.getInstance().textRenderer.getWidth(message);
+    int x = this.getX() + (this.getWidth() - width) / 2;
+    int y = this.getY() + (this.getHeight() - MinecraftClient.getInstance().textRenderer.fontHeight) / 2 - 18;
+    context.drawText(MinecraftClient.getInstance().textRenderer, message, x, y, 0x000000, true);
+
+    message = Text.literal("Preview vendor items to").formatted(Formatting.DARK_GRAY);
+    width = MinecraftClient.getInstance().textRenderer.getWidth(message);
+    x = this.getX() + (this.getWidth() - width) / 2;
+    y += 12;
+    context.drawText(MinecraftClient.getInstance().textRenderer, message, x, y, 0x000000, false);
+
+    message = Text.literal("add them to the journal.").formatted(Formatting.DARK_GRAY);
+    width = MinecraftClient.getInstance().textRenderer.getWidth(message);
+    x = this.getX() + (this.getWidth() - width) / 2;
+    y += 12;
+    context.drawText(MinecraftClient.getInstance().textRenderer, message, x, y, 0x000000, false);
   }
 
   private void renderItem(DrawContext context, ItemStack item, int x, int y) {

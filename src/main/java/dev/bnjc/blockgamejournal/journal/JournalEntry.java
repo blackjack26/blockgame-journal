@@ -87,6 +87,7 @@ public final class JournalEntry {
    * -1=Not applicable, 0=Not known, 1=Known
    */
   @Setter
+  @Deprecated(since = "0.3.1")
   private byte recipeKnown;
 
   /**
@@ -179,6 +180,14 @@ public final class JournalEntry {
     }
 
     return items;
+  }
+
+  public Boolean recipeKnown() {
+    if (Journal.INSTANCE == null) {
+      return null;
+    }
+
+    return Journal.INSTANCE.getMetadata().getKnownRecipe(this.key);
   }
 
   public void toggleFavorite() {

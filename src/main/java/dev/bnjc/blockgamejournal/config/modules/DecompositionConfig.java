@@ -12,8 +12,12 @@ public class DecompositionConfig implements ConfigData {
   @ConfigEntry.Gui.Tooltip
   public boolean partialDecomposition;
 
+  @ConfigEntry.Gui.Tooltip
+  public boolean useBackpackItems;
+
   public DecompositionConfig() {
     decomposeVanillaItems = false;
     partialDecomposition = true;
+    useBackpackItems = true;
   }
 }
