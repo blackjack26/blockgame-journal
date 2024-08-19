@@ -42,7 +42,6 @@ import net.minecraft.client.util.InputUtil;
 import net.minecraft.client.util.math.MatrixStack;
 import net.minecraft.command.CommandRegistryAccess;
 import net.minecraft.entity.Entity;
-import net.minecraft.entity.passive.ChickenEntity;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.item.ItemStack;
 import net.minecraft.nbt.NbtCompound;
@@ -261,6 +260,9 @@ public class RecipeTrackerGameFeature extends GameFeature {
     // All vendors have custom names. This should prevent players from being marked as vendors
     if (entity.hasCustomName()) {
       lastAttackedEntity = entity;
+
+      // Reset crafting station handler when attacking a new entity
+      craftingStationHandler.reset();
     }
 
     return ActionResult.PASS;

@@ -37,7 +37,7 @@
   "accessWidener": "blockgamejournal.accesswidener",
   "custom": {
     "modmenu": {
-      "update_checker": false,
+      "update_checker": true,
       "links": {
         "modmenu.discord": "https://discord.gg/piratesoftware"
       }

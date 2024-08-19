@@ -15,4 +15,8 @@ public class StringUtil {
     }
     return builder.toString();
   }
+
+  public static String removeFormatting(String nbtString) {
+    return nbtString.replaceAll("[§&][0-9a-f]", "");
+  }
 }

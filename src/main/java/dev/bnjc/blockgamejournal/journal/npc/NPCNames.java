@@ -21,7 +21,7 @@ public final class NPCNames {
     NAMES.put("Chef Ken", new NPCName("Ken", "Chef"));
     NAMES.put("Chef Sue", new NPCName("Sue", "Chef"));
     NAMES.put("Chef Nugget", new NPCName("Nugget", "Chef"));
-    NAMES.put("Chef Axe L. Adle", new NPCName("Axe L. Adle", "Chef"));
+    NAMES.put("Chef Axel Otto", new NPCName("Axel Otto", "Chef"));
     NAMES.put("Jam Master", new NPCName("Jam Master", null));
     NAMES.put("Baelin", new NPCName("Baelin", "Fisherman"));
     NAMES.put("Franky", new NPCName("Franky", "Fisherman"));
@@ -36,6 +36,7 @@ public final class NPCNames {
     NAMES.put("Miner", new NPCName("Steve", "Miner"));
     NAMES.put("Brokkr", new NPCName("Brokkr", "Rune Carver"));
     NAMES.put("Stonebeard", new NPCName("Stonebeard", "Rune Carver"));
+    NAMES.put("Runehilda", new NPCName("Runehilda", "Rune Carver"));
     NAMES.put("Silk Weaver", new NPCName("Wendy", "Silk Weaver"));
     NAMES.put("Spellcrafter", new NPCName("Sally", "Spellcrafter"));
     NAMES.put("Stone", new NPCName("Stone", "Golem"));

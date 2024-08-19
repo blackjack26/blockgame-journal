@@ -30,9 +30,7 @@ import net.minecraft.util.ActionResult;
 import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Optional;
+import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -47,6 +45,7 @@ public class CraftingStationHandler {
 
   private final RecipeTrackerGameFeature gameFeature;
   private final List<CraftingStationItem> inventory = new ArrayList<>();
+  private final Map<Integer, Byte> statusCache = new HashMap<>();
 
   private int syncId = -1;
   private String npcName = "";
@@ -54,6 +53,8 @@ public class CraftingStationHandler {
   @Getter
   @Nullable
   private CraftingStationItem lastClickedItem;
+
+  private boolean createOrUpdateVendor = false;
 
   public CraftingStationHandler(RecipeTrackerGameFeature gameFeature) {
     this.gameFeature = gameFeature;
@@ -66,7 +67,17 @@ public class CraftingStationHandler {
     DrawSlotListener.EVENT.register(this::drawSlot);
   }
 
+  public void reset() {
+    this.syncId = -1;
+    this.inventory.clear();
+    this.npcName = "";
+    this.lastClickedItem = null;
+    this.statusCache.clear();
+    this.createOrUpdateVendor = false;
+  }
+
   private ActionResult handleOpenScreen(OpenScreenS2CPacket packet) {
+    this.createOrUpdateVendor = false;
     String screenName = packet.getName().getString();
 
     // Look for screen name "Some Name (#page#/#max#)" - exclude "Party" from the name
@@ -88,10 +99,7 @@ public class CraftingStationHandler {
 
       if (lastAttackedEntity != null) {
         this.npcName = entityName;
-
-        if (Journal.INSTANCE != null) {
-          NPCUtil.createOrUpdate(this.npcName, lastAttackedEntity);
-        }
+        this.createOrUpdateVendor = true;
       } else {
         this.npcName = matcher.group(1);
       }
@@ -101,6 +109,7 @@ public class CraftingStationHandler {
 
     // TODO: Add paging
     this.inventory.clear();
+    this.statusCache.clear();
 
     return ActionResult.PASS;
   }
@@ -124,6 +133,12 @@ public class CraftingStationHandler {
 
       this.inventory.add(invItem);
     });
+
+    Entity lastAttackedEntity = this.gameFeature.getLastAttackedEntity();
+    if (this.createOrUpdateVendor && !this.inventory.isEmpty() && Journal.INSTANCE != null && lastAttackedEntity != null) {
+      NPCUtil.createOrUpdate(this.npcName, lastAttackedEntity);
+      this.createOrUpdateVendor = false;
+    }
 
     return ActionResult.PASS;
   }
@@ -174,6 +189,16 @@ public class CraftingStationHandler {
       return;
     }
 
+    Byte status = this.statusCache.get(slot.id);
+    if (status != null) {
+      if (status == 1) {
+        this.highlightSlot(context, slot, 0x30FF0000); // Missing
+      } else if (status == 2) {
+        this.highlightSlot(context, slot, 0x40CCCC00); // Outdated
+      }
+      return;
+    }
+
     // See if slot item matches inventory item
     ItemStack slotItem = slot.getStack();
     CraftingStationItem inventoryItem = this.inventory.get(slot.id);
@@ -196,6 +221,9 @@ public class CraftingStationHandler {
         inventoryItem.setOutdated(ItemUtil.isOutdated(entry, inventoryItem));
         if (highlightOutdated && inventoryItem.getOutdated()) {
           this.highlightSlot(context, slot, 0x40CCCC00);
+          this.statusCache.put(slot.id, (byte) 2);
+        } else {
+          this.statusCache.put(slot.id, (byte) 0);
         }
         return;
       }
@@ -204,6 +232,7 @@ public class CraftingStationHandler {
     // If the item is not in the journal, highlight it
     if (highlightMissing) {
       this.highlightSlot(context, slot, 0x30FF0000);
+      this.statusCache.put(slot.id, (byte) 1);
     }
   }
 

@@ -7,6 +7,7 @@ import dev.bnjc.blockgamejournal.listener.screen.ScreenOpenedListener;
 import dev.bnjc.blockgamejournal.listener.screen.ScreenReceivedInventoryListener;
 import dev.bnjc.blockgamejournal.util.NbtUtil;
 import dev.bnjc.blockgamejournal.util.Profession;
+import dev.bnjc.blockgamejournal.util.StringUtil;
 import lombok.Getter;
 import lombok.Setter;
 import net.minecraft.item.ItemStack;
@@ -24,7 +25,7 @@ import java.util.regex.Pattern;
 
 public class ProfileHandler {
   private static final Logger LOGGER = BlockgameJournal.getLogger("Profile Handler");
-  private static final Pattern LEVEL_PATTERN = Pattern.compile("Level: (\\d+)");
+  private static final Pattern LEVEL_PATTERN = Pattern.compile("^Level: (\\d+)");
 
   private final RecipeTrackerGameFeature gameFeature;
   private int syncId = -1;
@@ -63,6 +64,7 @@ public class ProfileHandler {
     parseProfessionLevel(inv, Profession.HERBALISM);
     parseProfessionLevel(inv, Profession.RUNECARVING);
     parseProfessionLevel(inv, Profession.COOKING);
+    parseProfessionLevel(inv, Profession.ALCHEMY);
 
     return ActionResult.PASS;
   }
@@ -89,13 +91,10 @@ public class ProfileHandler {
         continue;
       }
 
-      String line = textLine.getString();
-      if (line.contains(profession == Profession.EINHERJAR ? "Level:" : "Current Level:")) {
-        Matcher levelMatcher = LEVEL_PATTERN.matcher(line);
-        if (levelMatcher.find()) {
-          this.setProfessionLevel(profession, Integer.parseInt(levelMatcher.group(1)));
-          return;
-        }
+      Matcher levelMatcher = LEVEL_PATTERN.matcher(StringUtil.removeFormatting(textLine.getString()));
+      if (levelMatcher.find()) {
+        this.setProfessionLevel(profession, Integer.parseInt(levelMatcher.group(1)));
+        return;
       }
     }
 

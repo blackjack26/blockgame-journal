@@ -194,6 +194,10 @@ public class RecipePreviewHandler {
     }
 
     ItemStack recipeItem = inventory.get(ITEM_INDEX);
+    if (recipeItem.isEmpty()) {
+      LOGGER.warn("[Blockgame Journal] Recipe item is empty, cannot store recipe. Try again later.");
+      return;
+    }
 
     // Store the recipe in the player's journal
     BlockgameJournal.LOGGER.debug("[Blockgame Journal] Storing recipe for {}", ItemUtil.getName(recipeItem));

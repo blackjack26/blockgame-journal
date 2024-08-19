@@ -594,7 +594,7 @@ public class JournalScreen extends Screen {
       filtered = this.items;
     } else {
       filtered = this.items.stream()
-          .filter(item -> SearchUtil.defaultPredicate(item.getStack(), filter))
+          .filter(item -> SearchUtil.defaultPredicate(item.getStack(), filter) && !item.getStack().isEmpty())
           .toList();
     }
 

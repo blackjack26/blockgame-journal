@@ -8,6 +8,7 @@
     "item.ItemStackMixin",
     "network.ClientPlayerInteractionManagerMixin",
     "network.ClientPlayNetworkHandlerMixin",
+    "network.PlayerListEntryMixin",
     "renderer.WorldRendererMixin"
   ],
   "injectors": {

@@ -37,6 +37,8 @@ public class TrackingWidget extends ScrollableViewWidget {
 
   private int lastY;
   private int xOffset = 10;
+  private int mouseX = 0;
+  private int mouseY = 0;
 
   public TrackingWidget(Screen parent, int x, int y, int width, int height) {
     super(x, y, width, height, Text.empty());
@@ -75,6 +77,9 @@ public class TrackingWidget extends ScrollableViewWidget {
       return;
     }
 
+    this.mouseX = mouseX;
+    this.mouseY = mouseY;
+
     this.lastY = this.getY() + 12;
     this.xOffset = 10;
     this.ingredientPositions.clear();
@@ -110,8 +115,15 @@ public class TrackingWidget extends ScrollableViewWidget {
     this.renderRecipesKnown(context, trackingList.getKnownRecipes());
     this.renderRequiredProfessions(context, trackingList.getProfessions());
     this.renderIngredients(context, trackingList.getIngredientItems());
+  }
 
-    this.renderTooltip(context, mouseX, mouseY);
+  @Override
+  protected void renderOverlay(DrawContext context) {
+    super.renderOverlay(context);
+
+    if (this.visible) {
+      this.renderTooltip(context, mouseX, mouseY);
+    }
   }
 
   private void renderEntryHeader(DrawContext context, int x, int y, JournalEntry entry) {

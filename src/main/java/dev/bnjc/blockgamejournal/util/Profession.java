@@ -14,7 +14,8 @@ public enum Profession {
   FISHING("Fishing", 19, Items.FISHING_ROD),
   HERBALISM("Herbalism", 20, Items.IRON_HOE),
   RUNECARVING("Runecarving", 21, Items.SKULL_POTTERY_SHERD),
-  COOKING("Cooking", 28, Items.CAMPFIRE);
+  COOKING("Cooking", 28, Items.CAMPFIRE),
+  ALCHEMY("Alchemy", 30, Items.EXPERIENCE_BOTTLE);
 
   private final String name;
   private final int slot;
