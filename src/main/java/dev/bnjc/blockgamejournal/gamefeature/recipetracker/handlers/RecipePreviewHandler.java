@@ -2,17 +2,17 @@ package dev.bnjc.blockgamejournal.gamefeature.recipetracker.handlers;
 
 import dev.bnjc.blockgamejournal.BlockgameJournal;
 import dev.bnjc.blockgamejournal.gamefeature.recipetracker.RecipeTrackerGameFeature;
+import dev.bnjc.blockgamejournal.gamefeature.recipetracker.station.CraftingStationItem;
 import dev.bnjc.blockgamejournal.journal.Journal;
 import dev.bnjc.blockgamejournal.journal.JournalEntry;
 import dev.bnjc.blockgamejournal.journal.JournalEntryBuilder;
-import dev.bnjc.blockgamejournal.gamefeature.recipetracker.station.CraftingStationItem;
+import dev.bnjc.blockgamejournal.journal.metadata.JournalAdvancement;
 import dev.bnjc.blockgamejournal.listener.interaction.SlotClickedListener;
 import dev.bnjc.blockgamejournal.listener.screen.DrawSlotListener;
 import dev.bnjc.blockgamejournal.listener.screen.ScreenOpenedListener;
 import dev.bnjc.blockgamejournal.listener.screen.ScreenReceivedInventoryListener;
 import dev.bnjc.blockgamejournal.util.ItemUtil;
 import lombok.Getter;
-import lombok.Setter;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.entity.player.PlayerEntity;
@@ -28,9 +28,10 @@ import net.minecraft.util.ActionResult;
 import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
 
+import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Set;
+import java.util.Queue;
 
 public class RecipePreviewHandler {
   private static final Logger LOGGER = BlockgameJournal.getLogger("Recipe Preview");
@@ -39,11 +40,12 @@ public class RecipePreviewHandler {
 
   private static final int BACK_BUTTON_INDEX = 10;
   private static final int ITEM_INDEX = 16;
-  private static final int TRACK_BUTTON_INDEX = 19;
   private static final int PREV_PAGE_BUTTON_INDEX = 20;
   private static final int NEXT_PAGE_BUTTON_INDEX = 24;
   private static final int CRAFT_BUTTON_INDEX = 28;
   private static final int CONFIRM_BUTTON_INDEX = 34;
+
+  private static Queue<Long> lastPreviewTimes = new ArrayDeque<>();
 
   private final RecipeTrackerGameFeature gameFeature;
   private int syncId = -1;
@@ -108,20 +110,12 @@ public class RecipePreviewHandler {
 
     this.storeRecipe(inv);
 
-    // TODO: Add the track button to the inventory
-//    packet.getContents().set(TRACK_BUTTON_INDEX, new TrackRecipeItem().getItemStack());
     return ActionResult.PASS;
   }
 
   private ActionResult handleSlotClicked(int syncId, int slotId, int button, SlotActionType actionType, PlayerEntity player) {
     if (syncId != this.syncId) {
       return ActionResult.PASS;
-    }
-
-    // Handle track button click
-    if (slotId == TRACK_BUTTON_INDEX) {
-      this.handleTrackButtonClicked(button, actionType, player);
-      return ActionResult.FAIL; // Prevent any further processing
     }
 
     // Handle next button click
@@ -272,6 +266,7 @@ public class RecipePreviewHandler {
           BlockgameJournal.LOGGER.warn("[Blockgame Journal] No ingredients found in the recipe, and no cost was set");
         } else {
           Journal.INSTANCE.addEntry(recipeItem, entry);
+          this.checkForAdvancement();
           this.stored = true;
         }
       } else {
@@ -338,8 +333,20 @@ public class RecipePreviewHandler {
     return true;
   }
 
-  private void handleTrackButtonClicked(int button, SlotActionType actionType, PlayerEntity player) {
-    // Handle tracking button click
-    BlockgameJournal.LOGGER.info("[Blockgame Journal] Track button clicked!");
+  private void checkForAdvancement() {
+    if (Journal.INSTANCE == null || Journal.INSTANCE.getMetadata().hasAdvancement(JournalAdvancement.CARPAL_TUNNEL)) {
+      return;
+    }
+
+    lastPreviewTimes.add(System.currentTimeMillis());
+
+    if (lastPreviewTimes.size() >= 25) {
+      long firstTime = lastPreviewTimes.poll();
+
+      // If it has been less than a minute since the first preview, grant the advancement
+      if (System.currentTimeMillis() - firstTime <= 60000) {
+        JournalAdvancement.CARPAL_TUNNEL.grant();
+      }
+    }
   }
 }

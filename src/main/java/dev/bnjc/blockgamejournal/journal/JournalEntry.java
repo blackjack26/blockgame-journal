@@ -2,6 +2,7 @@ package dev.bnjc.blockgamejournal.journal;
 
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
+import dev.bnjc.blockgamejournal.BlockgameJournal;
 import dev.bnjc.blockgamejournal.util.ItemUtil;
 import lombok.Getter;
 import lombok.Setter;
@@ -41,6 +42,11 @@ public final class JournalEntry {
             entry.setFavorite(favorite);
             entry.setTracked(tracked);
             entry.setUnavailable(unavailable);
+
+            if (unavailable) {
+              BlockgameJournal.LOGGER.info("Journal entry for {} is marked as unavailable", key);
+            }
+
             return entry;
           })
   );
@@ -188,6 +194,30 @@ public final class JournalEntry {
     }
 
     return Journal.INSTANCE.getMetadata().getKnownRecipe(this.key);
+  }
+
+  public boolean isRecipeKnown() {
+    return !Boolean.FALSE.equals(this.recipeKnown());
+  }
+
+  public boolean meetsProfessionRequirements() {
+    if (Journal.INSTANCE == null) {
+      return false;
+    }
+
+    if (this.getRequiredLevel() == -1) {
+      return true;
+    }
+
+    return Journal.INSTANCE.getMetadata().getProfessionLevels().getOrDefault(this.getRequiredClass(), -1) >= this.getRequiredLevel();
+  }
+
+  public boolean isLocked() {
+    if (Journal.INSTANCE == null) {
+      return false;
+    }
+
+    return !isRecipeKnown() || !meetsProfessionRequirements();
   }
 
   public void toggleFavorite() {

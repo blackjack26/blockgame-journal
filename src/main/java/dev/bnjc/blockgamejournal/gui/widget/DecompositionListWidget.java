@@ -81,7 +81,7 @@ public class DecompositionListWidget extends ScrollableViewWidget {
     }
 
     int x = this.getX() + 1;
-    context.drawItem(new ItemStack(Items.GOLD_NUGGET), x, this.lastY);
+    context.drawItem(ItemUtil.getGoldItem((int) this.entry.getCost()), x, this.lastY);
 
     MutableText text = Text.empty();
     if (Journal.INSTANCE == null || Journal.INSTANCE.getMetadata().getPlayerBalance() == -1f) {

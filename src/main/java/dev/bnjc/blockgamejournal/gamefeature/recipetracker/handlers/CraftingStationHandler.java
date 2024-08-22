@@ -11,8 +11,10 @@ import dev.bnjc.blockgamejournal.listener.interaction.SlotClickedListener;
 import dev.bnjc.blockgamejournal.listener.screen.DrawSlotListener;
 import dev.bnjc.blockgamejournal.listener.screen.ScreenOpenedListener;
 import dev.bnjc.blockgamejournal.listener.screen.ScreenReceivedInventoryListener;
+import dev.bnjc.blockgamejournal.util.GuiUtil;
 import dev.bnjc.blockgamejournal.util.ItemUtil;
 import dev.bnjc.blockgamejournal.util.NbtUtil;
+import dev.bnjc.blockgamejournal.util.Profession;
 import lombok.Getter;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.DrawContext;
@@ -45,6 +47,11 @@ public class CraftingStationHandler {
 
   private final RecipeTrackerGameFeature gameFeature;
   private final List<CraftingStationItem> inventory = new ArrayList<>();
+
+  private static final byte STATUS_NONE = 0;
+  private static final byte STATUS_MISSING = 1;
+  private static final byte STATUS_OUTDATED = 1 << 1;
+  private static final byte STATUS_LOCKED = 1 << 2;
   private final Map<Integer, Byte> statusCache = new HashMap<>();
 
   private int syncId = -1;
@@ -140,6 +147,26 @@ public class CraftingStationHandler {
       this.createOrUpdateVendor = false;
     }
 
+    if (Journal.INSTANCE != null) {
+      for (JournalEntry journalEntry : Journal.INSTANCE.getEntriesForVendor(this.npcName)) {
+        boolean found = false;
+
+        // See if there is a matching item in the inventory in the same slot
+        for (CraftingStationItem stationItem : this.inventory) {
+          if (stationItem == null) {
+            continue;
+          }
+
+          if (ItemUtil.getKey(stationItem.getItem()).equals(journalEntry.getKey())) {
+            found = true;
+            break;
+          }
+        }
+
+        journalEntry.setUnavailable(!found);
+      }
+    }
+
     return ActionResult.PASS;
   }
 
@@ -180,7 +207,8 @@ public class CraftingStationHandler {
 
     boolean highlightMissing = BlockgameJournal.getConfig().getGeneralConfig().highlightMissingRecipes;
     boolean highlightOutdated = BlockgameJournal.getConfig().getGeneralConfig().highlightOutdatedRecipes;
-    if (!highlightMissing && !highlightOutdated) {
+    boolean showRecipeLock = BlockgameJournal.getConfig().getGeneralConfig().showRecipeLock;
+    if (!highlightMissing && !highlightOutdated && !showRecipeLock) {
       return;
     }
 
@@ -191,10 +219,14 @@ public class CraftingStationHandler {
 
     Byte status = this.statusCache.get(slot.id);
     if (status != null) {
-      if (status == 1) {
-        this.highlightSlot(context, slot, 0x30FF0000); // Missing
-      } else if (status == 2) {
-        this.highlightSlot(context, slot, 0x40CCCC00); // Outdated
+      if ((status & STATUS_MISSING) != 0) {
+        this.highlightSlot(context, slot, 0x30FF0000);
+      } else if ((status & STATUS_OUTDATED) != 0) {
+        this.highlightSlot(context, slot, 0x40CCCC00);
+      }
+
+      if ((status & STATUS_LOCKED) != 0) {
+        this.drawLocked(context, slot);
       }
       return;
     }
@@ -211,6 +243,20 @@ public class CraftingStationHandler {
       return;
     }
 
+    boolean recipeNotKnown = Boolean.FALSE.equals(inventoryItem.getRecipeKnown());
+    boolean profRequirementNotMet = false;
+    if (inventoryItem.getRequiredLevel() != -1) {
+      int currLevel = Journal.INSTANCE.getMetadata().getProfessionLevels().getOrDefault(inventoryItem.getRequiredClass(), -1);
+      if (currLevel != -1 && currLevel < inventoryItem.getRequiredLevel()) {
+        profRequirementNotMet = true;
+      }
+    }
+
+    if ((recipeNotKnown || profRequirementNotMet) && showRecipeLock) {
+      this.drawLocked(context, slot);
+      this.statusCache.compute(slot.id, (k, v) -> v == null ? STATUS_LOCKED : (byte) (v | STATUS_LOCKED));
+    }
+
     List<JournalEntry> entries = Journal.INSTANCE.getEntries().getOrDefault(ItemUtil.getKey(inventoryItem.getItem()), new ArrayList<>());
     for (JournalEntry entry : entries) {
       String expectedNpcName = entry.getNpcName();
@@ -221,9 +267,10 @@ public class CraftingStationHandler {
         inventoryItem.setOutdated(ItemUtil.isOutdated(entry, inventoryItem));
         if (highlightOutdated && inventoryItem.getOutdated()) {
           this.highlightSlot(context, slot, 0x40CCCC00);
-          this.statusCache.put(slot.id, (byte) 2);
+          this.statusCache.compute(slot.id, (k, v) -> v == null ? STATUS_OUTDATED : (byte) (v | STATUS_OUTDATED));
         } else {
-          this.statusCache.put(slot.id, (byte) 0);
+          // Negate the status if it's not outdated
+          this.statusCache.compute(slot.id, (k, v) -> v == null ? STATUS_NONE : (byte) (v & ~STATUS_OUTDATED));
         }
         return;
       }
@@ -232,8 +279,15 @@ public class CraftingStationHandler {
     // If the item is not in the journal, highlight it
     if (highlightMissing) {
       this.highlightSlot(context, slot, 0x30FF0000);
-      this.statusCache.put(slot.id, (byte) 1);
+      this.statusCache.compute(slot.id, (k, v) -> v == null ? STATUS_MISSING : (byte) (v | STATUS_MISSING));
     }
+  }
+
+  private void drawLocked(DrawContext context, Slot slot) {
+    context.getMatrices().push();
+    context.getMatrices().translate(0, 0, 150);
+    context.drawGuiTexture(GuiUtil.sprite("lock_icon"), slot.x + 10, slot.y - 2, 150, 8, 8);
+    context.getMatrices().pop();
   }
 
   private void highlightSlot(DrawContext context, Slot slot, int color) {

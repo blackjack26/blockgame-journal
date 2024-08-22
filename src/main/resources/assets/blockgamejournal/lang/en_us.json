@@ -39,6 +39,8 @@
   "text.autoconfig.blockgamejournal.option.generalConfig.highlightMissingRecipes.@Tooltip": "Whether to highlight missing recipes in the vendor's recipe list.",
   "text.autoconfig.blockgamejournal.option.generalConfig.highlightOutdatedRecipes": "Highlight Outdated Recipes",
   "text.autoconfig.blockgamejournal.option.generalConfig.highlightOutdatedRecipes.@Tooltip": "Whether to highlight outdated recipes in the vendor's recipe list.",
+  "text.autoconfig.blockgamejournal.option.generalConfig.showRecipeLock": "Show Recipe Lock Icon",
+  "text.autoconfig.blockgamejournal.option.generalConfig.showRecipeLock.@Tooltip": "Whether to show a lock icon for recipes without a learned recipe or high enough level.",
   "text.autoconfig.blockgamejournal.option.generalConfig.defaultMode": "Default Mode",
   "text.autoconfig.blockgamejournal.option.generalConfig.defaultMode.@Tooltip": "The default mode to open the recipe journal in.",
   "text.autoconfig.blockgamejournal.option.generalConfig.defaultNpcSort": "Default Vendor Item Sort",

@@ -3,26 +3,21 @@ package dev.bnjc.blockgamejournal.journal;
 import com.mojang.authlib.GameProfile;
 import com.mojang.serialization.Codec;
 import dev.bnjc.blockgamejournal.BlockgameJournal;
+import dev.bnjc.blockgamejournal.gui.toast.EasterEggToast;
+import dev.bnjc.blockgamejournal.journal.metadata.JournalAdvancement;
 import dev.bnjc.blockgamejournal.journal.metadata.Metadata;
 import dev.bnjc.blockgamejournal.journal.npc.NPCEntry;
 import dev.bnjc.blockgamejournal.journal.npc.NPCItemStack;
-import dev.bnjc.blockgamejournal.journal.npc.NPCNames;
 import dev.bnjc.blockgamejournal.storage.Storage;
 import dev.bnjc.blockgamejournal.storage.backend.FileBasedBackend;
 import dev.bnjc.blockgamejournal.util.ItemUtil;
 import lombok.Getter;
 import lombok.Setter;
+import net.minecraft.client.MinecraftClient;
 import net.minecraft.item.ItemStack;
-import net.minecraft.item.Items;
-import net.minecraft.item.PlayerHeadItem;
 import net.minecraft.nbt.NbtCompound;
 import net.minecraft.nbt.NbtHelper;
-import net.minecraft.nbt.NbtList;
-import net.minecraft.nbt.NbtString;
 import net.minecraft.registry.Registries;
-import net.minecraft.text.MutableText;
-import net.minecraft.text.Text;
-import net.minecraft.util.Formatting;
 import net.minecraft.util.Identifier;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -204,6 +199,27 @@ public class Journal {
 
     List<JournalEntry> recipeEntries = entries.get(key);
     return recipeEntries.get(0);
+  }
+
+  public List<JournalEntry> getEntriesForVendor(String vendorName) {
+    List<JournalEntry> entries = new ArrayList<>();
+    for (ArrayList<JournalEntry> recipeEntries : this.entries.values()) {
+      for (JournalEntry entry : recipeEntries) {
+        if (entry.getNpcName().toLowerCase(Locale.ROOT).equals(vendorName.toLowerCase(Locale.ROOT))) {
+          entries.add(entry);
+        }
+      }
+    }
+    return entries;
+  }
+
+  public boolean removeAllEntries(String key) {
+    if (!entries.containsKey(key)) {
+      return false;
+    }
+
+    entries.remove(key);
+    return true;
   }
 
   public boolean removeEntry(String key, int index) {

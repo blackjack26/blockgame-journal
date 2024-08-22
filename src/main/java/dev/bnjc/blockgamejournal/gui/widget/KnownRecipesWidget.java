@@ -20,8 +20,6 @@ public class KnownRecipesWidget extends ScrollableViewWidget {
 
   private final Screen parent;
   private final TextRenderer textRenderer;
-
-  private static boolean showKnownRecipes = false;
   private int lastY;
 
   public KnownRecipesWidget(Screen parent, int x, int y, int width, int height) {
@@ -60,96 +58,77 @@ public class KnownRecipesWidget extends ScrollableViewWidget {
     MutableText titleText = Text.literal("Learned Recipes").formatted(Formatting.WHITE, Formatting.BOLD);
     context.drawText(textRenderer, titleText, this.getX(), this.lastY, 0x404040, false);
 
-    Text showHideText = Text.literal(showKnownRecipes ? "Hide" : "Show").formatted(Formatting.DARK_PURPLE, Formatting.UNDERLINE);
-    context.drawText(textRenderer, showHideText, this.getX() + this.getWidth() - textRenderer.getWidth(showHideText) - 4, this.lastY, 0x404040, false);
-
     this.lastY += 12;
 
-    if (showKnownRecipes) {
-      // Order known recipes by name
-      Map<String, String> nameMap = new HashMap<>();
-      for (String recipeId : knownRecipes.keySet()) {
-        // Item
-        ItemStack itemStack = Journal.INSTANCE.getKnownItem(recipeId);
-        String itemName;
-        if (itemStack == null) {
-          // Convert key to item name "mmoitems:SANCTIFIED_BOOTS" -> "Sanctified Boots"
-          // Remove "mmoitems:" and replace "_" with " "
-          itemName = recipeId.substring(recipeId.indexOf(":") + 1).replace("_", " ").toLowerCase();
+    // Order known recipes by name
+    Map<String, String> nameMap = new HashMap<>();
+    for (String recipeId : knownRecipes.keySet()) {
+      // Item
+      ItemStack itemStack = Journal.INSTANCE.getKnownItem(recipeId);
+      String itemName;
+      if (itemStack == null) {
+        // Convert key to item name "mmoitems:SANCTIFIED_BOOTS" -> "Sanctified Boots"
+        // Remove "mmoitems:" and replace "_" with " "
+        itemName = recipeId.substring(recipeId.indexOf(":") + 1).replace("_", " ").toLowerCase();
 
-          // Capitalize first letter of each word
-          for (int i = 0; i < itemName.length(); i++) {
-            if (i == 0 || itemName.charAt(i - 1) == ' ') {
-              itemName = itemName.substring(0, i) + Character.toUpperCase(itemName.charAt(i)) + itemName.substring(i + 1);
-            }
+        // Capitalize first letter of each word
+        for (int i = 0; i < itemName.length(); i++) {
+          if (i == 0 || itemName.charAt(i - 1) == ' ') {
+            itemName = itemName.substring(0, i) + Character.toUpperCase(itemName.charAt(i)) + itemName.substring(i + 1);
           }
-        } else {
-          itemName = ItemUtil.getName(itemStack);
         }
-
-        nameMap.put(recipeId, itemName);
+      } else {
+        itemName = ItemUtil.getName(itemStack);
       }
 
-      // Get keys sorted by name
-      List<String> knownRecipeIds = new ArrayList<>(nameMap.keySet());
-      knownRecipeIds.sort(Comparator.comparing(nameMap::get));
+      nameMap.put(recipeId, itemName);
+    }
 
-      for (String recipeId : knownRecipeIds) {
-        boolean known = knownRecipes.get(recipeId);
+    // Get keys sorted by name
+    List<String> knownRecipeIds = new ArrayList<>(nameMap.keySet());
+    knownRecipeIds.sort(Comparator.comparing(nameMap::get));
 
-        // Item
-        ItemStack itemStack = Journal.INSTANCE.getKnownItem(recipeId);
-        String itemName;
-        if (itemStack == null) {
-          itemStack = new ItemStack(Items.BOOK);
+    for (String recipeId : knownRecipeIds) {
+      boolean known = knownRecipes.get(recipeId);
 
-          // Convert key to item name "mmoitems:SANCTIFIED_BOOTS" -> "Sanctified Boots"
-          // Remove "mmoitems:" and replace "_" with " "
-          itemName = recipeId.substring(recipeId.indexOf(":") + 1).replace("_", " ").toLowerCase();
+      // Item
+      ItemStack itemStack = Journal.INSTANCE.getKnownItem(recipeId);
+      String itemName;
+      if (itemStack == null) {
+        itemStack = new ItemStack(Items.BOOK);
 
-          // Capitalize first letter of each word
-          for (int i = 0; i < itemName.length(); i++) {
-            if (i == 0 || itemName.charAt(i - 1) == ' ') {
-              itemName = itemName.substring(0, i) + Character.toUpperCase(itemName.charAt(i)) + itemName.substring(i + 1);
-            }
+        // Convert key to item name "mmoitems:SANCTIFIED_BOOTS" -> "Sanctified Boots"
+        // Remove "mmoitems:" and replace "_" with " "
+        itemName = recipeId.substring(recipeId.indexOf(":") + 1).replace("_", " ").toLowerCase();
+
+        // Capitalize first letter of each word
+        for (int i = 0; i < itemName.length(); i++) {
+          if (i == 0 || itemName.charAt(i - 1) == ' ') {
+            itemName = itemName.substring(0, i) + Character.toUpperCase(itemName.charAt(i)) + itemName.substring(i + 1);
           }
-        } else {
-          itemName = ItemUtil.getName(itemStack);
         }
-
-        // Render item
-        context.drawItem(itemStack, this.getX() + 2, this.lastY);
-        MutableText text = Text.literal(known ? "✔ " : "✖ ").formatted(known ? Formatting.DARK_GREEN : Formatting.DARK_RED);
-        text.append(Text.literal(itemName).formatted(Formatting.WHITE));
-        this.lastY = GuiUtil.drawMultiLineText(
-            context,
-            this.textRenderer,
-            this.getX() + 20,
-            this.lastY,
-            text,
-            this.getWidth() - 20
-        );
-        this.lastY += 6;
+      } else {
+        itemName = ItemUtil.getName(itemStack);
       }
+
+      // Render item
+      context.drawItem(itemStack, this.getX() + 2, this.lastY);
+      MutableText text = Text.literal(known ? "✔ " : "✖ ").formatted(known ? Formatting.DARK_GREEN : Formatting.DARK_RED);
+      text.append(Text.literal(itemName).formatted(Formatting.WHITE));
+      this.lastY = GuiUtil.drawMultiLineText(
+          context,
+          this.textRenderer,
+          this.getX() + 20,
+          this.lastY,
+          text,
+          this.getWidth() - 20
+      );
+      this.lastY += 6;
     }
   }
 
   @Override
   protected void appendClickableNarrations(NarrationMessageBuilder builder) {
 
-  }
-
-  @Override
-  public boolean mouseClicked(double mouseX, double mouseY, int button) {
-    if (visible && isOverTitle((int) mouseX, (int) mouseY)) {
-      showKnownRecipes = !showKnownRecipes;
-      this.playDownSound(MinecraftClient.getInstance().getSoundManager());
-      return true;
-    }
-    return super.mouseClicked(mouseX, mouseY, button);
-  }
-
-  private boolean isOverTitle(int mouseX, int mouseY) {
-    return mouseX >= this.getX() && mouseX < this.getX() + this.getWidth() && mouseY >= this.getY() + 12 && mouseY < this.getY() + 24;
   }
 }

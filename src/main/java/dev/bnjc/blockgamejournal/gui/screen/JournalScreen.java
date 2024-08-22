@@ -81,7 +81,6 @@ public class JournalScreen extends Screen {
   private VerticalScrollWidget scroll;
   @Getter
   private TrackingWidget trackingWidget;
-  private KnownRecipesWidget knownRecipesWidget;
 
   private ButtonWidget closeButton;
   private ButtonWidget itemSortButton;
@@ -116,15 +115,18 @@ public class JournalScreen extends Screen {
     super.init();
 
     // Known Recipes
-    int knownWidth = Math.min(200, this.width - (this.left + MENU_WIDTH + 4) - 4);
-    this.knownRecipesWidget = new KnownRecipesWidget(
-        this,
-        this.width - knownWidth,
-        0,
-        knownWidth - 4,
-        this.height
+    TexturedButtonWidget learnedRecipesButton = new TexturedButtonWidget(
+        this.width - 24,
+        8,
+        16,
+        16,
+        new ButtonTextures(GuiUtil.sprite("learned_recipe_icon"), GuiUtil.sprite("learned_recipe_icon")),
+        (button) -> {
+          MinecraftClient.getInstance().setScreen(new LearnedRecipesScreen(this));
+        }
     );
-    this.addDrawableChild(this.knownRecipesWidget);
+    learnedRecipesButton.setTooltip(Tooltip.of(Text.literal("View Learned Recipes")));
+    this.addDrawableChild(learnedRecipesButton);
 
     // Tracking
     this.trackingWidget = new TrackingWidget(
@@ -291,7 +293,7 @@ public class JournalScreen extends Screen {
       JournalMode mode = modes.get(index);
       ItemStack stack = new ItemStack(mode.icon());
 
-      ItemStack mmc = Journal.INSTANCE.getKnownNpcItem("Mayor McCheese");
+      ItemStack mmc = Journal.INSTANCE.getKnownNpcItem("Franky");
       if (mode.type() == JournalMode.Type.NPC_SEARCH && mmc != null) {
         stack = mmc;
       }

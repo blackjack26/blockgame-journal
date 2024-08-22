@@ -49,11 +49,15 @@ public class Metadata {
           Codec.unboundedMap(Codec.STRING, Codec.BOOL)
               .xmap(HashMap::new, Function.identity())
               .optionalFieldOf("knownRecipes")
-              .forGetter(meta -> Optional.ofNullable(meta.knownRecipes))
+              .forGetter(meta -> Optional.ofNullable(meta.knownRecipes)),
+          Codec.unboundedMap(JournalAdvancement.CODEC, Codec.BOOL)
+              .xmap(HashMap::new, Function.identity())
+              .optionalFieldOf("advancements")
+              .forGetter(meta -> Optional.ofNullable(meta.advancements))
       ).apply(instance, (name, lastModified, loadedTime, playerBalance, balanceLastUpdated,
                          professionLevels, professionLastUpdated,
                          backpackContents, backpackLastUpdated,
-                         knownRecipes) -> {
+                         knownRecipes, advancements) -> {
         Metadata meta = new Metadata(
             name.orElse(null),
             lastModified.map(Instant::ofEpochMilli).orElse(Instant.now()),
@@ -70,6 +74,7 @@ public class Metadata {
         backpackLastUpdated.ifPresent(time -> meta.backpackLastUpdated = Instant.ofEpochMilli(time));
 
         knownRecipes.ifPresent(meta::setKnownRecipes);
+        advancements.ifPresent(meta::setAdvancements);
 
         return meta;
       })
@@ -97,6 +102,9 @@ public class Metadata {
   @Setter
   private HashMap<String, Boolean> knownRecipes;
 
+  @Setter
+  private HashMap<JournalAdvancement, Boolean> advancements;
+
   public Metadata(@Nullable String name, Instant lastModified, long loadedTime) {
     this.name = name;
     this.lastModified = lastModified;
@@ -108,6 +116,7 @@ public class Metadata {
     this.backpackContents = new HashMap<>();
     this.backpackLastUpdated = null;
     this.knownRecipes = new HashMap<>();
+    this.advancements = new HashMap<>();
   }
 
   public static Metadata blank() {
@@ -161,5 +170,13 @@ public class Metadata {
 
   public Boolean getKnownRecipe(String recipe) {
     return this.knownRecipes.get(recipe);
+  }
+
+  public void grantAdvancement(JournalAdvancement advancement) {
+    this.advancements.put(advancement, true);
+  }
+
+  public boolean hasAdvancement(JournalAdvancement advancement) {
+    return this.advancements.getOrDefault(advancement, false);
   }
 }

@@ -6,6 +6,7 @@ import dev.bnjc.blockgamejournal.journal.Journal;
 import dev.bnjc.blockgamejournal.journal.JournalEntry;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.item.ItemStack;
+import net.minecraft.item.Items;
 import net.minecraft.nbt.NbtCompound;
 import net.minecraft.recipe.*;
 import net.minecraft.registry.Registries;
@@ -58,6 +59,13 @@ public class ItemUtil {
     NbtCompound stackNbt = itemStack.getNbt();
     if (stackNbt != null && stackNbt.contains("MMOITEMS_ITEM_ID")) {
       key = "mmoitems:" + stackNbt.getString("MMOITEMS_ITEM_ID");
+
+      if (stackNbt.contains("MMOITEMS_NAME_PRE")) {
+        String namePre = stackNbt.getString("MMOITEMS_NAME_PRE");
+        if (namePre.contains("Corrupted")) {
+          key += "_CORRUPTED";
+        }
+      }
     }
 
     return key;
@@ -78,20 +86,47 @@ public class ItemUtil {
 
     // If result has "MMOITEMS_NAME" tag, then it is an MMOItems item. Otherwise, it is a vanilla item.
     NbtCompound stackNbt = itemStack.getNbt();
-    if (stackNbt != null && stackNbt.contains("MMOITEMS_NAME")) {
-      name = stackNbt.getString("MMOITEMS_NAME");
+    if (stackNbt != null) {
+      if (stackNbt.contains("MMOITEMS_NAME")) {
+        name = stackNbt.getString("MMOITEMS_NAME");
 
-      // Remove any formatting codes from the name
-      // - <tier-name>
-      // - <tier-color>
-      // - <tier-color-cleaned>
-      name = name.replaceAll("<[^>]+>", "");
+        // Remove any formatting codes from the name
+        // - <tier-name>
+        // - <tier-color>
+        // - <tier-color-cleaned>
+        name = name.replaceAll("<[^>]+>", "");
 
-      // Also remove any color codes from the name
-      name = name.replaceAll("[§&][0-9a-f]", "");
+        // Also remove any color codes from the name
+        name = name.replaceAll("[§&][0-9a-f]", "");
+      }
+
+      if (stackNbt.contains("MMOITEMS_NAME_PRE")) {
+        String namePre = stackNbt.getString("MMOITEMS_NAME_PRE");
+        if (namePre.contains("Corrupted")) {
+          name = "§d§lCorrupted§r " + name;
+        }
+      }
     }
 
     return name;
+  }
+
+  public static ItemStack getGoldItem(int count) {
+    ItemStack item = null;
+
+    if (Journal.INSTANCE != null) {
+      item = Journal.INSTANCE.getKnownItem("mmoitems:GOLD_COIN");
+    }
+
+    if (item == null) {
+      item = new ItemStack(Items.GOLD_NUGGET, count);
+      NbtCompound stackNbt = item.getOrCreateNbt();
+      stackNbt.putString("MMOITEMS_ITEM_ID", "GOLD_COIN");
+      stackNbt.putString("MMOITEMS_NAME", "Gold Coin");
+      item.setNbt(stackNbt);
+    }
+
+    return item;
   }
 
   public static Optional<Integer> getRevisionId(ItemStack itemStack) {

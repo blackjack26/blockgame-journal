@@ -1,5 +1,6 @@
 package dev.bnjc.blockgamejournal.gui.widget;
 
+import dev.bnjc.blockgamejournal.BlockgameJournal;
 import dev.bnjc.blockgamejournal.gui.screen.RecipeScreen;
 import dev.bnjc.blockgamejournal.journal.Journal;
 import dev.bnjc.blockgamejournal.journal.JournalEntry;
@@ -23,6 +24,7 @@ import net.minecraft.util.Formatting;
 import net.minecraft.util.math.MathHelper;
 import org.jetbrains.annotations.Nullable;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -41,6 +43,8 @@ public class RecipeWidget extends ClickableWidget {
   private boolean scrollbarDragged;
   private Map<String, Integer[]> ingredientPositions;
 
+  private List<Text> tooltip;
+
   public RecipeWidget(Screen parent, int x, int y, int width, int height) {
     super(x, y, width, height, Text.empty());
 
@@ -54,6 +58,7 @@ public class RecipeWidget extends ClickableWidget {
     setScrollY(0.0);
 
     this.inventory = JournalPlayerInventory.defaultInventory();
+    this.tooltip = new ArrayList<>();
   }
 
   @Override
@@ -145,14 +150,19 @@ public class RecipeWidget extends ClickableWidget {
 
   @Override
   protected void renderButton(DrawContext context, int mouseX, int mouseY, float delta) {
-    this.renderRecipeItem(context);
+    if (!this.tooltip.isEmpty()) {
+      context.drawTooltip(textRenderer, this.tooltip, mouseX, mouseY);
+    }
+    this.tooltip.clear();
+
+    this.renderRecipeItem(context, mouseX, mouseY);
     this.renderNpcName(context);
 
     this.scrollTop = this.lastY;
     context.enableScissor(this.getX(), this.scrollTop, this.getX() + this.getWidth(), this.getY() + this.getHeight());
     context.getMatrices().push();
     context.getMatrices().translate(0.0, -this.scrollY, 0.0);
-    this.renderEntries(context);
+    this.renderEntries(context, mouseX, mouseY);
     context.getMatrices().pop();
     context.disableScissor();
 
@@ -166,7 +176,7 @@ public class RecipeWidget extends ClickableWidget {
 
   }
 
-  private void renderRecipeItem(DrawContext context) {
+  private void renderRecipeItem(DrawContext context, int mouseX, int mouseY) {
     if (this.entry == null) {
       return;
     }
@@ -180,6 +190,53 @@ public class RecipeWidget extends ClickableWidget {
     int x = this.getX() + this.getWidth() / 2 - 8;
     int y = this.getY() + 2;
     context.drawItem(item, x, y);
+
+    boolean renderUnavailable = this.entry.isUnavailable();
+    if (renderUnavailable) {
+      context.getMatrices().push();
+      context.getMatrices().translate(0, 0, 150);
+      context.drawGuiTexture(GuiUtil.sprite("warning_icon"), x, y - 2, 150, 8, 8);
+      context.getMatrices().pop();
+    }
+
+    boolean recipeKnown = this.entry.isRecipeKnown();
+    boolean profReqMet = this.entry.meetsProfessionRequirements();
+    boolean renderLock = !(recipeKnown && profReqMet) && BlockgameJournal.getConfig().getGeneralConfig().showRecipeLock;
+    if (renderLock) {
+      context.getMatrices().push();
+      context.getMatrices().translate(0, 0, 150);
+      context.drawGuiTexture(GuiUtil.sprite("lock_icon"), x + 10, y - 2, 150, 8, 8);
+      context.getMatrices().pop();
+    }
+
+    if (mouseX >= x && mouseX < x + 16 && mouseY >= y && mouseY < y + 16) {
+      List<Text> tooltip = new ArrayList<>();
+      if (renderUnavailable) {
+        tooltip.add(Text.literal("⚠ Not available from " + entry.getNpcName() + " ⚠").formatted(Formatting.RED));
+        tooltip.add(Text.empty());
+        tooltip.add(Text.literal("This recipe has either moved vendors").formatted(Formatting.GRAY));
+        tooltip.add(Text.literal("or is no longer available for crafting.").formatted(Formatting.GRAY));
+      }
+
+      if (renderLock) {
+        if (renderUnavailable) {
+          // Add a spacer
+          tooltip.add(Text.empty());
+        }
+
+        tooltip.add(Text.literal("Recipe locked").formatted(Formatting.RED));
+        if (!recipeKnown) {
+          tooltip.add(Text.literal("- Recipe not known").formatted(Formatting.GRAY));
+        }
+        if (!profReqMet) {
+          tooltip.add(Text.literal("- Profession level too low").formatted(Formatting.GRAY));
+        }
+      }
+
+      if (!tooltip.isEmpty()) {
+        context.drawTooltip(textRenderer, tooltip, mouseX, mouseY);
+      }
+    }
 
     // Item count (in bottom right corner of item)
     if (this.entry.getCount() > 1) {
@@ -217,31 +274,42 @@ public class RecipeWidget extends ClickableWidget {
     this.lastY += 16;
   }
 
-  private void renderEntries(DrawContext context) {
+  private void renderEntries(DrawContext context, int mouseX, int mouseY) {
     if (entry == null) {
       // TODO: Render empty entry
       return;
     }
 
-    this.renderCost(context);
+    this.renderCost(context, mouseX, mouseY);
     this.renderRecipeKnown(context);
-    this.renderRequiredClass(context);
+    this.renderRequiredClass(context, mouseX, mouseY);
     this.renderIngredients(context);
   }
 
-  private void renderCost(DrawContext context) {
+  private void renderCost(DrawContext context, int mouseX, int mouseY) {
     if (this.entry == null || this.entry.getCost() <= 0) {
       return;
     }
 
     int x = this.getX();
-    context.drawItem(new ItemStack(Items.GOLD_NUGGET), x, this.lastY);
+    context.drawItem(ItemUtil.getGoldItem((int) this.entry.getCost()), x, this.lastY);
 
     int iconX = x + 20;
     int iconY = this.lastY + 4;
     MutableText text = Text.empty();
     if (Journal.INSTANCE == null || Journal.INSTANCE.getMetadata().getPlayerBalance() == -1f) {
       text.append(Text.literal("?").formatted(Formatting.DARK_PURPLE, Formatting.BOLD));
+
+      if (mouseX >= x && mouseX < x + this.getWidth() && mouseY >= this.lastY && mouseY < this.lastY + 16) {
+        tooltip.add(Text.literal("Player balance unknown").formatted(Formatting.WHITE));
+        tooltip.add(Text.empty());
+        tooltip.add(Text.literal("Run the ").formatted(Formatting.GRAY)
+            .append(Text.literal("/balance").formatted(Formatting.YELLOW))
+            .append(Text.literal(" command").formatted(Formatting.GRAY))
+        );
+        tooltip.add(Text.literal("to update your balance").formatted(Formatting.GRAY));
+      }
+
     } else if (Journal.INSTANCE.getMetadata().getPlayerBalance() >= entry.getCost()) {
       text.append(Text.literal("✔").formatted(Formatting.DARK_GREEN));
     } else {
@@ -275,7 +343,7 @@ public class RecipeWidget extends ClickableWidget {
     this.lastY += 16;
   }
 
-  private void renderRequiredClass(DrawContext context) {
+  private void renderRequiredClass(DrawContext context, int mouseX, int mouseY) {
     if (this.entry == null || this.entry.getRequiredLevel() == -1) {
       return;
     }
@@ -292,6 +360,17 @@ public class RecipeWidget extends ClickableWidget {
     MutableText text = Text.empty();
     if (Journal.INSTANCE == null || Journal.INSTANCE.getMetadata().getProfessionLevels().get(entry.getRequiredClass()) == null) {
       text.append(Text.literal("?").formatted(Formatting.DARK_PURPLE, Formatting.BOLD));
+
+      if (mouseX >= x && mouseX < x + this.getWidth() && mouseY >= this.lastY && mouseY < this.lastY + 16) {
+        tooltip.add(Text.literal("Profession level unknown").formatted(Formatting.WHITE));
+        tooltip.add(Text.empty());
+        tooltip.add(Text.literal("Run the ").formatted(Formatting.GRAY)
+            .append(Text.literal("/profile").formatted(Formatting.YELLOW))
+            .append(Text.literal(" command").formatted(Formatting.GRAY))
+        );
+        tooltip.add(Text.literal("to update your professions").formatted(Formatting.GRAY));
+      }
+
     } else if (Journal.INSTANCE.getMetadata().getProfessionLevels().get(entry.getRequiredClass()) >= entry.getRequiredLevel()) {
       text.append(Text.literal("✔").formatted(Formatting.DARK_GREEN));
     } else {

@@ -15,6 +15,9 @@ public class GeneralConfig implements ConfigData {
   public boolean highlightOutdatedRecipes;
 
   @ConfigEntry.Gui.Tooltip
+  public boolean showRecipeLock;
+
+  @ConfigEntry.Gui.Tooltip
   @ConfigEntry.Gui.EnumHandler(option = ConfigEntry.Gui.EnumHandler.EnumDisplayOption.BUTTON)
   public JournalMode.Type defaultMode;
 
@@ -25,6 +28,7 @@ public class GeneralConfig implements ConfigData {
   public GeneralConfig() {
     highlightMissingRecipes = true;
     highlightOutdatedRecipes = true;
+    showRecipeLock = true;
     defaultMode = JournalMode.Type.ITEM_SEARCH;
     defaultNpcSort = ItemListWidget.VendorSort.A_TO_Z;
   }

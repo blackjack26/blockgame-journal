@@ -1,6 +1,8 @@
 package dev.bnjc.blockgamejournal.gui.widget;
 
+import dev.bnjc.blockgamejournal.BlockgameJournal;
 import dev.bnjc.blockgamejournal.gui.screen.JournalScreen;
+import dev.bnjc.blockgamejournal.gui.screen.TrackingScreen;
 import dev.bnjc.blockgamejournal.journal.Journal;
 import dev.bnjc.blockgamejournal.journal.JournalEntry;
 import dev.bnjc.blockgamejournal.journal.TrackingList;
@@ -11,8 +13,11 @@ import dev.bnjc.blockgamejournal.util.Profession;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.font.TextRenderer;
 import net.minecraft.client.gui.DrawContext;
+import net.minecraft.client.gui.screen.ButtonTextures;
 import net.minecraft.client.gui.screen.Screen;
 import net.minecraft.client.gui.screen.narration.NarrationMessageBuilder;
+import net.minecraft.client.gui.tooltip.Tooltip;
+import net.minecraft.client.gui.widget.TexturedButtonWidget;
 import net.minecraft.item.ItemStack;
 import net.minecraft.item.Items;
 import net.minecraft.text.MutableText;
@@ -22,11 +27,14 @@ import net.minecraft.util.Formatting;
 import java.util.*;
 
 public class TrackingWidget extends ScrollableViewWidget {
+  private static final int MIN_WIDTH = 150;
+
   private static Set<String> expandedIngredients = new HashSet<>();
   private static boolean flattened = false;
 
   private final Screen parent;
   private final TextRenderer textRenderer;
+  private final TexturedButtonWidget showHideButton;
 
   private JournalPlayerInventory inventory;
   private TrackingList trackingList;
@@ -50,6 +58,18 @@ public class TrackingWidget extends ScrollableViewWidget {
     this.inventory = JournalPlayerInventory.defaultInventory();
     this.ingredientPositions = new HashMap<>();
     this.itemPositions = new HashMap<>();
+
+    this.showHideButton = new TexturedButtonWidget(
+        8,
+        8,
+        16,
+        16,
+        new ButtonTextures(GuiUtil.sprite("tracking_icon"), GuiUtil.sprite("tracking_icon")),
+        (button) -> {
+          MinecraftClient.getInstance().setScreen(new TrackingScreen(parent));
+        }
+    );
+    this.showHideButton.setTooltip(Tooltip.of(Text.literal("View Tracking List")));
   }
 
   public void setEntries(List<JournalEntry> entries) {
@@ -82,6 +102,15 @@ public class TrackingWidget extends ScrollableViewWidget {
 
     this.lastY = this.getY() + 12;
     this.xOffset = 10;
+
+    if (this.isSmall()) {
+      this.showHideButton.render(context, mouseX, mouseY, delta);
+    } else {
+      this.renderFull(context);
+    }
+  }
+
+  private void renderFull(DrawContext context) {
     this.ingredientPositions.clear();
     this.itemPositions.clear();
 
@@ -98,7 +127,7 @@ public class TrackingWidget extends ScrollableViewWidget {
     Text reqText = Text.literal("Requirements").formatted(Formatting.WHITE, Formatting.BOLD);
     context.drawText(textRenderer, reqText, this.getX() + xOffset, this.lastY, 0x404040, false);
 
-    Text flattenText = Text.literal(flattened ? "Unflatten" : "Flatten").formatted(Formatting.DARK_PURPLE, Formatting.UNDERLINE);
+    Text flattenText = Text.literal(flattened ? "Collapse" : "Expand").formatted(Formatting.DARK_PURPLE, Formatting.UNDERLINE);
     context.drawText(
         textRenderer,
         flattenText,
@@ -153,7 +182,7 @@ public class TrackingWidget extends ScrollableViewWidget {
     }
 
     int x = this.getX() + xOffset;
-    context.drawItem(new ItemStack(Items.GOLD_NUGGET), x, this.lastY);
+    context.drawItem(ItemUtil.getGoldItem((int) cost), x, this.lastY);
 
     boolean obtained = false;
     MutableText text = Text.empty();
@@ -333,59 +362,62 @@ public class TrackingWidget extends ScrollableViewWidget {
       return;
     }
 
-    for (Map.Entry<JournalEntry, Integer[]> entry : this.itemPositions.entrySet()) {
-      Integer[] bounds = entry.getValue();
-      if (mouseY + getScrollY() >= bounds[0] && mouseY + getScrollY() <= bounds[1]) {
-        JournalEntry journalEntry = entry.getKey();
-        if (journalEntry != null && journalEntry.getItem() != null) {
-          List<Text> tooltipText = new ArrayList<>();
+    if (!this.isSmall()) {
+      // TODO: Move this to a separate method
+      for (Map.Entry<JournalEntry, Integer[]> entry : this.itemPositions.entrySet()) {
+        Integer[] bounds = entry.getValue();
+        if (mouseY + getScrollY() >= bounds[0] && mouseY + getScrollY() <= bounds[1]) {
+          JournalEntry journalEntry = entry.getKey();
+          if (journalEntry != null && journalEntry.getItem() != null) {
+            List<Text> tooltipText = new ArrayList<>();
 
-          tooltipText.add(Text.literal(ItemUtil.getName(journalEntry.getItem())).formatted(Formatting.WHITE));
+            tooltipText.add(Text.literal(ItemUtil.getName(journalEntry.getItem())).formatted(Formatting.WHITE));
 
-          if (journalEntry.getNpcName() != null) {
-            tooltipText.add(Text.literal("Vendor: ").formatted(Formatting.GRAY)
-                .append(Text.literal(journalEntry.getNpcName()).formatted(Formatting.DARK_AQUA)));
+            if (journalEntry.getNpcName() != null) {
+              tooltipText.add(Text.literal("Vendor: ").formatted(Formatting.GRAY)
+                  .append(Text.literal(journalEntry.getNpcName()).formatted(Formatting.DARK_AQUA)));
+            }
+
+            tooltipText.add(Text.empty());
+            tooltipText.add(Text.literal("Right-click to remove from list").formatted(Formatting.ITALIC, Formatting.GRAY));
+
+            context.getMatrices().push();
+            context.getMatrices().translate(0, 0, 200.0f);
+            context.drawTooltip(textRenderer, tooltipText, mouseX, mouseY);
+            context.getMatrices().pop();
+
+            return;
           }
-
-          tooltipText.add(Text.empty());
-          tooltipText.add(Text.literal("Right-click to remove from list").formatted(Formatting.ITALIC, Formatting.GRAY));
-
-          context.getMatrices().push();
-          context.getMatrices().translate(0, 0, 200.0f);
-          context.drawTooltip(textRenderer, tooltipText, mouseX, mouseY);
-          context.getMatrices().pop();
-
-          return;
         }
       }
-    }
 
-    for (Map.Entry<String, Integer[]> entry : this.ingredientPositions.entrySet()) {
-      Integer[] bounds = entry.getValue();
+      for (Map.Entry<String, Integer[]> entry : this.ingredientPositions.entrySet()) {
+        Integer[] bounds = entry.getValue();
 
-      String[] keys = entry.getKey().split(";");
-      String clickedItemKey = keys[keys.length - 1];
+        String[] keys = entry.getKey().split(";");
+        String clickedItemKey = keys[keys.length - 1];
 
-      if (mouseY + getScrollY() >= bounds[0] && mouseY + getScrollY() <= bounds[1]) {
-        ItemStack stack = Journal.INSTANCE.getKnownItem(clickedItemKey);
-        if (stack != null) {
-          List<Text> tooltipText = new ArrayList<>();
-          tooltipText.add(Text.literal(ItemUtil.getName(stack)).formatted(Formatting.WHITE));
+        if (mouseY + getScrollY() >= bounds[0] && mouseY + getScrollY() <= bounds[1]) {
+          ItemStack stack = Journal.INSTANCE.getKnownItem(clickedItemKey);
+          if (stack != null) {
+            List<Text> tooltipText = new ArrayList<>();
+            tooltipText.add(Text.literal(ItemUtil.getName(stack)).formatted(Formatting.WHITE));
 
-          JournalEntry journalEntry = Journal.INSTANCE.getFirstJournalEntry(clickedItemKey);
-          if (journalEntry != null) {
-            tooltipText.add(Text.literal("Vendor: ").formatted(Formatting.GRAY)
-                .append(Text.literal(journalEntry.getNpcName()).formatted(Formatting.DARK_AQUA)));
-            tooltipText.add(Text.empty());
-            tooltipText.add(Text.literal("Left-click to expand/collapse").formatted(Formatting.ITALIC, Formatting.GRAY));
+            JournalEntry journalEntry = Journal.INSTANCE.getFirstJournalEntry(clickedItemKey);
+            if (journalEntry != null) {
+              tooltipText.add(Text.literal("Vendor: ").formatted(Formatting.GRAY)
+                  .append(Text.literal(journalEntry.getNpcName()).formatted(Formatting.DARK_AQUA)));
+              tooltipText.add(Text.empty());
+              tooltipText.add(Text.literal("Left-click to expand/collapse").formatted(Formatting.ITALIC, Formatting.GRAY));
+            }
+
+            context.getMatrices().push();
+            context.getMatrices().translate(0, 0, 200.0f);
+            context.drawTooltip(textRenderer, tooltipText, mouseX, mouseY);
+            context.getMatrices().pop();
+
+            return;
           }
-
-          context.getMatrices().push();
-          context.getMatrices().translate(0, 0, 200.0f);
-          context.drawTooltip(textRenderer, tooltipText, mouseX, mouseY);
-          context.getMatrices().pop();
-
-          return;
         }
       }
     }
@@ -400,6 +432,10 @@ public class TrackingWidget extends ScrollableViewWidget {
   public boolean mouseClicked(double mouseX, double mouseY, int button) {
     if (!this.active || !this.visible || Journal.INSTANCE == null) {
       return false;
+    }
+
+    if (this.isSmall() && this.showHideButton.mouseClicked(mouseX, mouseY, button)) {
+      return true;
     }
 
     if (this.isWithinBounds(mouseX, mouseY)) {
@@ -433,8 +469,7 @@ public class TrackingWidget extends ScrollableViewWidget {
           toggleFlattened();
           return true;
         }
-      }
-      else if (button == 1) {
+      } else if (button == 1) {
         for (Map.Entry<JournalEntry, Integer[]> entry : this.itemPositions.entrySet()) {
           Integer[] bounds = entry.getValue();
           if (mouseY + getScrollY() >= bounds[0] && mouseY + getScrollY() <= bounds[1]) {
@@ -444,6 +479,8 @@ public class TrackingWidget extends ScrollableViewWidget {
 
               if (this.parent instanceof JournalScreen journalScreen) {
                 journalScreen.refreshTracking();
+              } else if (this.parent instanceof TrackingScreen trackingScreen) {
+                trackingScreen.refreshTracking();
               }
 
               return true;
@@ -452,7 +489,6 @@ public class TrackingWidget extends ScrollableViewWidget {
         }
       }
     }
-
     return false;
   }
 
@@ -463,5 +499,9 @@ public class TrackingWidget extends ScrollableViewWidget {
     } else {
       trackingList.nest();
     }
+  }
+
+  private boolean isSmall() {
+    return this.getWidth() < MIN_WIDTH;
   }
 }

@@ -19,6 +19,7 @@ import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.screen.Screen;
 import net.minecraft.client.gui.screen.narration.NarrationMessageBuilder;
 import net.minecraft.client.gui.widget.ClickableWidget;
+import net.minecraft.client.toast.SystemToast;
 import net.minecraft.item.ItemStack;
 import net.minecraft.item.PlayerHeadItem;
 import net.minecraft.item.SpawnEggItem;
@@ -32,6 +33,7 @@ import org.jetbrains.annotations.Nullable;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Locale;
 
 import static dev.bnjc.blockgamejournal.gui.screen.JournalScreen.GRID_SLOT_SIZE;
 
@@ -174,6 +176,10 @@ public class ItemListWidget extends ClickableWidget {
 
   @Override
   protected void renderButton(DrawContext context, int mouseX, int mouseY, float delta) {
+    if (!this.visible) {
+      return;
+    }
+
     if (!this.items.isEmpty()) {
       context.drawGuiTexture(BACKGROUND, this.getX(), this.getY(), this.getWidth(), this.getHeight());
     }
@@ -199,9 +205,6 @@ public class ItemListWidget extends ClickableWidget {
       if (npcEntry.isPresent()) {
         NPCEntry npc = npcEntry.get();
 
-        // Print key code
-        BlockgameJournal.LOGGER.info("Key code: {}", keyCode);
-
         if (keyCode == 'a' || keyCode == 'A') {
           // If NPC is locating and the A key is pressed, stop locating
           if (npc.isLocating()) {
@@ -220,6 +223,13 @@ public class ItemListWidget extends ClickableWidget {
         else if (keyCode == 'x' || keyCode == 'X') {
           // Remove NPC from known NPCs
           NPCUtil.removeNPC(npcName);
+          MinecraftClient.getInstance()
+              .getToastManager()
+              .add(new SystemToast(
+                  SystemToast.Type.PERIODIC_NOTIFICATION,
+                  Text.of("Vendor Removed!"),
+                  Text.of(npcName)
+              ));
 
           if (this.parent instanceof JournalScreen journalScreen) {
             journalScreen.refreshItems();
@@ -236,6 +246,26 @@ public class ItemListWidget extends ClickableWidget {
           for (JournalEntry entry : entries) {
             entry.setFavorite(false);
           }
+
+          if (this.parent instanceof JournalScreen journalScreen) {
+            journalScreen.refreshItems();
+          }
+          return true;
+        }
+      }
+    }
+    else if (this.mode == JournalMode.Type.ITEM_SEARCH) {
+      if (keyCode == 'x' || keyCode == 'X') {
+        if (Journal.INSTANCE.hasJournalEntry(this.hoveredItem)) {
+          Journal.INSTANCE.removeAllEntries(ItemUtil.getKey(this.hoveredItem));
+
+          MinecraftClient.getInstance()
+              .getToastManager()
+              .add(new SystemToast(
+                  SystemToast.Type.PERIODIC_NOTIFICATION,
+                  Text.of("Recipe(s) Removed!"),
+                  Text.of(ItemUtil.getName(this.hoveredItem))
+              ));
 
           if (this.parent instanceof JournalScreen journalScreen) {
             journalScreen.refreshItems();
@@ -313,6 +343,95 @@ public class ItemListWidget extends ClickableWidget {
             break;
           }
         }
+
+        // Check for locked recipes
+        boolean recipeKnown = true;
+        boolean profReqMet = true;
+        for (JournalEntry entry : entries) {
+          if (!entry.isRecipeKnown()) {
+            recipeKnown = false;
+          }
+
+          if (!entry.meetsProfessionRequirements()) {
+            profReqMet = false;
+          }
+        }
+
+        if (!(recipeKnown && profReqMet) && BlockgameJournal.getConfig().getGeneralConfig().showRecipeLock) {
+          context.getMatrices().push();
+          context.getMatrices().translate(0, 0, 150);
+          context.drawGuiTexture(GuiUtil.sprite("lock_icon"), x + 10, y - 2, 150, 8, 8);
+          context.getMatrices().pop();
+        }
+      }
+    }
+
+    if (Journal.INSTANCE != null && Journal.INSTANCE.hasJournalEntry(item)) {
+      List<JournalEntry> entries = Journal.INSTANCE.getEntries()
+          .getOrDefault(ItemUtil.getKey(item), new ArrayList<>())
+          .stream().filter((entry) -> {
+            if (JournalScreen.getSelectedNpc() == null) {
+              return true;
+            }
+
+            return entry.getNpcName().toLowerCase(Locale.ROOT).equals(JournalScreen.getSelectedNpc().getNpcWorldName().toLowerCase(Locale.ROOT));
+          })
+          .toList();
+
+      // Check for locked recipes
+      boolean recipeKnown = false;
+      boolean profReqMet = false;
+      boolean unavailable = true;
+      for (JournalEntry entry : entries) {
+        Boolean erk = entry.recipeKnown();
+        if (erk == null || Boolean.TRUE.equals(erk)) {
+          recipeKnown = true;
+        }
+
+        if (entry.getRequiredLevel() != -1) {
+          int currLevel = Journal.INSTANCE.getMetadata().getProfessionLevels().getOrDefault(entry.getRequiredClass(), -1);
+          if (currLevel >= entry.getRequiredLevel()) {
+            profReqMet = true;
+          }
+        } else {
+          profReqMet = true;
+        }
+
+        if (!entry.isUnavailable()) {
+          unavailable = false;
+        }
+      }
+
+      if (!(recipeKnown && profReqMet) && BlockgameJournal.getConfig().getGeneralConfig().showRecipeLock) {
+        context.getMatrices().push();
+        context.getMatrices().translate(0, 0, 150);
+        context.drawGuiTexture(GuiUtil.sprite("lock_icon"), x + 10, y - 2, 150, 8, 8);
+        context.getMatrices().pop();
+      }
+
+      if (unavailable) {
+        context.getMatrices().push();
+        context.getMatrices().translate(0, 0, 150);
+        context.drawGuiTexture(GuiUtil.sprite("warning_icon"), x, y - 2, 150, 8, 8);
+        context.getMatrices().pop();
+      }
+
+      int count = -1;
+
+      if (this.useSlotPositions()) {
+        count = item.getCount();
+      }
+      else if (entries.size() == 1) {
+        count = entries.get(0).getCount();
+      }
+
+      if (count > 1) {
+        context.getMatrices().push();
+        context.getMatrices().translate(0.0f, 0.0f, 200.0f);
+
+        Text text = Text.literal("" + count).formatted(Formatting.WHITE);
+        context.drawText(MinecraftClient.getInstance().textRenderer, text, x + 19 - 2 - MinecraftClient.getInstance().textRenderer.getWidth(text), y + 6 + 3, 0xFFFFFF, true);
+        context.getMatrices().pop();
       }
     }
 
@@ -335,7 +454,9 @@ public class ItemListWidget extends ClickableWidget {
 
     int slotX = this.getX() + x * GRID_SLOT_SIZE;
     int slotY = this.getY() + y * GRID_SLOT_SIZE;
-    context.fill(slotX + 1, slotY + 1, slotX + GRID_SLOT_SIZE - 1, slotY + GRID_SLOT_SIZE - 1, 0x80_FFFFFF);
+    if (!this.items.isEmpty()) {
+      context.fill(slotX + 1, slotY + 1, slotX + GRID_SLOT_SIZE - 1, slotY + GRID_SLOT_SIZE - 1, 0x80_FFFFFF);
+    }
 
     int index = (y * this.gridWidth) + x;
 

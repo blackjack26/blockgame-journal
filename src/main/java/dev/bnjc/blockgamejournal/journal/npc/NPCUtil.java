@@ -1,6 +1,8 @@
 package dev.bnjc.blockgamejournal.journal.npc;
 
+import dev.bnjc.blockgamejournal.gui.toast.VendorToast;
 import dev.bnjc.blockgamejournal.journal.Journal;
+import net.minecraft.client.MinecraftClient;
 import net.minecraft.entity.Entity;
 
 import java.util.HashSet;
@@ -17,6 +19,8 @@ public final class NPCUtil {
     // Check if there is an existing NPC entry with the same name
     NPCEntry existing = Journal.INSTANCE.getKnownNPCs().get(name);
     if (existing == null) {
+      boolean foundChanged = false;
+
       // Check if there is an existing NPC entry with the same UUID
       for (var knownNpcEntry : Journal.INSTANCE.getKnownNPCs().entrySet()) {
         if (knownNpcEntry.getValue().getId().equals(npcEntry.getId())) {
@@ -32,8 +36,13 @@ public final class NPCUtil {
             }
           }
 
+          foundChanged = true;
           break;
         }
+      }
+
+      if (!foundChanged) {
+        VendorToast.show(MinecraftClient.getInstance().getToastManager(), npcEntry);
       }
     }
 

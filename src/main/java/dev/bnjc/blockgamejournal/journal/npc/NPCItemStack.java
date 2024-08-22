@@ -104,12 +104,8 @@ public class NPCItemStack {
       loreNbt.add(NbtString.of(Text.Serializer.toJson(loreText)));
     }
 
+    loreNbt.add(NbtString.of(Text.Serializer.toJson(Text.literal(""))));
     if (npcEntry.isLocating()) {
-      // Add an empty line between the title and the helper text
-      if (npcNameObj.title() != null) {
-        loreNbt.add(NbtString.of(Text.Serializer.toJson(Text.literal(""))));
-      }
-
       // Display helper text in the lore:
       // "Locating NPC in the world..."
       MutableText locatingText = Text.literal(" Locating NPC...");
@@ -124,11 +120,6 @@ public class NPCItemStack {
       loreNbt.add(NbtString.of(Text.Serializer.toJson(stopLocatingText)));
     }
     else if (npcEntry.getPosition() != null) {
-      // Add an empty line between the title and the helper text
-      if (npcNameObj.title() != null) {
-        loreNbt.add(NbtString.of(Text.Serializer.toJson(Text.literal(""))));
-      }
-
       // Display helper text in the lore:
       // "Press A to locate NPC in the world"
       MutableText locateText = Text.literal(" ⚐ ").formatted(Formatting.GRAY)
@@ -143,7 +134,6 @@ public class NPCItemStack {
         .append(Text.literal(" to remove NPC").formatted(Formatting.GRAY));
     removeNpcText.setStyle(removeNpcText.getStyle().withItalic(false));
     loreNbt.add(NbtString.of(Text.Serializer.toJson(removeNpcText)));
-    loreNbt.add(NbtString.of(Text.Serializer.toJson(Text.literal(""))));
 
     this.itemStack.getOrCreateSubNbt(ItemStack.DISPLAY_KEY).put(ItemStack.LORE_KEY, loreNbt);
   }

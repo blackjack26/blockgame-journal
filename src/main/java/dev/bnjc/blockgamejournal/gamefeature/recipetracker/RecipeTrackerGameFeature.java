@@ -257,13 +257,8 @@ public class RecipeTrackerGameFeature extends GameFeature {
   }
 
   private ActionResult handleEntityAttacked(PlayerEntity playerEntity, Entity entity) {
-    // All vendors have custom names. This should prevent players from being marked as vendors
-    if (entity.hasCustomName()) {
-      lastAttackedEntity = entity;
-
-      // Reset crafting station handler when attacking a new entity
-      craftingStationHandler.reset();
-    }
+    lastAttackedEntity = entity;
+    craftingStationHandler.reset();
 
     return ActionResult.PASS;
   }

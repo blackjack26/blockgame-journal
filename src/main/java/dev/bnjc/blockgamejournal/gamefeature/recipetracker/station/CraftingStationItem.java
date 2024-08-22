@@ -3,6 +3,7 @@ package dev.bnjc.blockgamejournal.gamefeature.recipetracker.station;
 import lombok.Getter;
 import lombok.Setter;
 import net.minecraft.item.ItemStack;
+import org.jetbrains.annotations.Nullable;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -13,6 +14,7 @@ public class CraftingStationItem {
   private final int slot;
 
   @Setter
+  @Nullable
   private Boolean recipeKnown = null;
 
   @Setter
@@ -25,6 +27,7 @@ public class CraftingStationItem {
   private int requiredLevel = -1;
 
   @Setter
+  @Nullable
   private Boolean outdated = null;
 
   /**
