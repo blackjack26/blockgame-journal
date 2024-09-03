@@ -14,7 +14,7 @@ public class JournalItemStack {
   }
 
   public JournalItemStack(ItemStack stack, int slot) {
-    this.stack = stack;
+    this.stack = stack.copy();
     this.slot = slot;
   }
 

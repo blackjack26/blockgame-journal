@@ -8,8 +8,6 @@ import dev.bnjc.blockgamejournal.listener.screen.ScreenReceivedInventoryListener
 import dev.bnjc.blockgamejournal.util.NbtUtil;
 import dev.bnjc.blockgamejournal.util.Profession;
 import dev.bnjc.blockgamejournal.util.StringUtil;
-import lombok.Getter;
-import lombok.Setter;
 import net.minecraft.item.ItemStack;
 import net.minecraft.nbt.NbtList;
 import net.minecraft.network.packet.s2c.play.InventoryS2CPacket;
@@ -26,6 +24,7 @@ import java.util.regex.Pattern;
 public class ProfileHandler {
   private static final Logger LOGGER = BlockgameJournal.getLogger("Profile Handler");
   private static final Pattern LEVEL_PATTERN = Pattern.compile("^Level: (\\d+)");
+  private static final Pattern IGNORED_PATTERN = Pattern.compile("^(Offense|Defense|Professions|Talents)$");
 
   private final RecipeTrackerGameFeature gameFeature;
   private int syncId = -1;
@@ -55,58 +54,66 @@ public class ProfileHandler {
       return ActionResult.PASS;
     }
 
-    List<ItemStack> inv = packet.getContents();
-    parseProfessionLevel(inv, Profession.MINING);
-    parseProfessionLevel(inv, Profession.LOGGING);
-    parseProfessionLevel(inv, Profession.ARCHAEOLOGY);
-    parseProfessionLevel(inv, Profession.EINHERJAR);
-    parseProfessionLevel(inv, Profession.FISHING);
-    parseProfessionLevel(inv, Profession.HERBALISM);
-    parseProfessionLevel(inv, Profession.RUNECARVING);
-    parseProfessionLevel(inv, Profession.COOKING);
-    parseProfessionLevel(inv, Profession.ALCHEMY);
-
+    parseProfessions(packet.getContents());
     return ActionResult.PASS;
   }
 
-  private void parseProfessionLevel(List<ItemStack> inv, Profession profession) {
-    int slot = profession.getSlot();
-    ItemStack stack = inv.get(slot);
-    if (stack.isEmpty()) {
-      LOGGER.warn("[Blockgame Journal] Empty slot: {}", slot);
-      this.setProfessionLevel(profession, null);
-      return;
-    }
-
-    NbtList lore = NbtUtil.getLore(stack);
-    if (lore == null) {
-      LOGGER.warn("[Blockgame Journal] No lore found in slot: {}", slot);
-      this.setProfessionLevel(profession, null);
-      return;
-    }
-
-    for (int i = 0; i < lore.size(); i++) {
-      MutableText textLine = NbtUtil.parseLoreLine(lore.getString(i));
-      if (textLine == null) {
+  private void parseProfessions(List<ItemStack> inv) {
+    // Only look at items in 6x9 menu
+    for (int i = 0; i < Math.min(inv.size(), 54); i++) {
+      ItemStack itemStack = inv.get(i);
+      if (itemStack == null || itemStack.isEmpty()) {
         continue;
       }
 
-      Matcher levelMatcher = LEVEL_PATTERN.matcher(StringUtil.removeFormatting(textLine.getString()));
-      if (levelMatcher.find()) {
-        this.setProfessionLevel(profession, Integer.parseInt(levelMatcher.group(1)));
-        return;
+      String name = itemStack.getName().getString();
+      if (IGNORED_PATTERN.matcher(name).find()) {
+        continue;
       }
-    }
 
-    LOGGER.warn("[Blockgame Journal] No level found in lore");
-    this.setProfessionLevel(profession, null);
+      Profession profession = Profession.from(name);
+      String profName = "";
+      if (profession == null) {
+        LOGGER.warn("[Blockgame Journal] Unknown profession: {}", name);
+        profName = name;
+      } else {
+        profName = profession.getName();
+      }
+
+      NbtList lore = NbtUtil.getLore(itemStack);
+      if (lore == null) {
+        LOGGER.warn("[Blockgame Journal] No lore found for profession: {}", profName);
+        this.setProfessionLevel(profName, null);
+        continue;
+      }
+
+      Integer foundLevel = null;
+      for (int t = 0; t < lore.size(); t++) {
+        MutableText textLine = NbtUtil.parseLoreLine(lore.getString(t));
+        if (textLine == null) {
+          continue;
+        }
+
+        Matcher levelMatcher = LEVEL_PATTERN.matcher(StringUtil.removeFormatting(textLine.getString()));
+        if (levelMatcher.find()) {
+          foundLevel = Integer.parseInt(levelMatcher.group(1));
+          break;
+        }
+      }
+
+      if (foundLevel == null) {
+        LOGGER.warn("[Blockgame Journal] No level found for profession: {}", profName);
+      }
+
+      this.setProfessionLevel(profName, foundLevel);
+    }
   }
 
-  private void setProfessionLevel(Profession profession, @Nullable Integer level) {
+  private void setProfessionLevel(String name, @Nullable Integer level) {
     if (Journal.INSTANCE == null) {
       return;
     }
 
-    Journal.INSTANCE.getMetadata().setProfessionLevel(profession.getName(), level);
+    Journal.INSTANCE.getMetadata().setProfessionLevel(name, level);
   }
 }

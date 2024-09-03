@@ -2,6 +2,7 @@ package dev.bnjc.blockgamejournal.util;
 
 import lombok.Getter;
 import net.minecraft.item.Item;
+import net.minecraft.item.ItemStack;
 import net.minecraft.item.Items;
 import org.jetbrains.annotations.Nullable;
 
@@ -13,8 +14,9 @@ public enum Profession {
   EINHERJAR("Profile", 15, Items.PLAYER_HEAD),
   FISHING("Fishing", 19, Items.FISHING_ROD),
   HERBALISM("Herbalism", 20, Items.IRON_HOE),
-  RUNECARVING("Runecarving", 21, Items.SKULL_POTTERY_SHERD),
+  HUNTING("Hunting", 21, Items.RABBIT_HIDE),
   COOKING("Cooking", 28, Items.CAMPFIRE),
+  RUNECARVING("Runecarving", 29, Items.SKULL_POTTERY_SHERD),
   ALCHEMY("Alchemy", 30, Items.EXPERIENCE_BOTTLE);
 
   private final String name;
@@ -27,12 +29,20 @@ public enum Profession {
     this.item = item;
   }
 
-  public static @Nullable Profession fromClass(String className) {
+  public static @Nullable Profession from(String className) {
     for (Profession profession : values()) {
-      if (profession.name().equalsIgnoreCase(className)) {
+      if (profession.name().equalsIgnoreCase(className) || profession.getName().equalsIgnoreCase(className)) {
         return profession;
       }
     }
     return null;
+  }
+
+  public static ItemStack getIcon(String className) {
+    Profession profession = from(className);
+    if (profession == null) {
+      return new ItemStack(Items.WRITABLE_BOOK);
+    }
+    return new ItemStack(profession.getItem());
   }
 }

@@ -15,6 +15,7 @@ import net.minecraft.item.Items;
 import net.minecraft.text.MutableText;
 import net.minecraft.text.Text;
 import net.minecraft.util.Formatting;
+import org.jetbrains.annotations.Nullable;
 
 import java.util.Map;
 
@@ -123,24 +124,23 @@ public class DecompositionListWidget extends ScrollableViewWidget {
   }
 
   private void renderRequiredClasses(DrawContext context) {
-    if (this.entry.getProfessions().isEmpty()) {
+    if (this.entry.getProfessions().isEmpty() || Journal.INSTANCE == null) {
       return;
     }
 
     for (Map.Entry<String, Integer> entry : this.entry.getProfessions().entrySet()) {
-      int x = this.getX() + 1;
-
-      Profession profession = Profession.fromClass(entry.getKey());
-      if (profession == null) {
+      if (entry.getValue() == null || entry.getValue() == -1) {
         continue;
       }
 
-      context.drawItem(new ItemStack(profession.getItem()), x, this.lastY);
+      int x = this.getX() + 1;
+      context.drawItem(Profession.getIcon(entry.getKey()), x, this.lastY);
 
+      @Nullable Integer profLevel = Journal.INSTANCE.getMetadata().getProfessionLevels().get(entry.getKey());
       MutableText text = Text.empty();
-      if (Journal.INSTANCE == null || Journal.INSTANCE.getMetadata().getProfessionLevels().get(entry.getKey()) == null) {
+      if (profLevel == null) {
         text.append(Text.literal("?").formatted(Formatting.DARK_PURPLE, Formatting.BOLD));
-      } else if (Journal.INSTANCE.getMetadata().getProfessionLevels().get(entry.getKey()) >= entry.getValue()) {
+      } else if (profLevel >= entry.getValue()) {
         text.append(Text.literal("✔").formatted(Formatting.DARK_GREEN));
       } else {
         text.append(Text.literal("✖").formatted(Formatting.DARK_RED));

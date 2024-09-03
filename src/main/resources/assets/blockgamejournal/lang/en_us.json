@@ -5,6 +5,8 @@
   "blockgamejournal.favorite_recipe": "Favorite Recipe",
   "blockgamejournal.filter.inventory.true": "Only Inventory: ON",
   "blockgamejournal.filter.inventory.false": "Only Inventory: OFF",
+  "blockgamejournal.filter.unlocked.true": "Only Unlocked: ON",
+  "blockgamejournal.filter.unlocked.false": "Only Unlocked: OFF",
   "blockgamejournal.mode.ITEM_SEARCH": "Search All Recipes",
   "blockgamejournal.menu.mode.ITEM_SEARCH": "By Item",
   "blockgamejournal.mode.NPC_SEARCH": "Search Recipes by Vendor",

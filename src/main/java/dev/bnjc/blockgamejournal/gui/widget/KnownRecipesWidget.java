@@ -114,7 +114,7 @@ public class KnownRecipesWidget extends ScrollableViewWidget {
       // Render item
       context.drawItem(itemStack, this.getX() + 2, this.lastY);
       MutableText text = Text.literal(known ? "✔ " : "✖ ").formatted(known ? Formatting.DARK_GREEN : Formatting.DARK_RED);
-      text.append(Text.literal(itemName).formatted(Formatting.WHITE));
+      text.append(Text.literal(itemName).formatted(known ? Formatting.WHITE : Formatting.GRAY));
       this.lastY = GuiUtil.drawMultiLineText(
           context,
           this.textRenderer,

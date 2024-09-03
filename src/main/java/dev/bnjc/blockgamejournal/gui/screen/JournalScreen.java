@@ -22,7 +22,13 @@ import net.minecraft.client.gui.widget.TextFieldWidget;
 import net.minecraft.client.gui.widget.TexturedButtonWidget;
 import net.minecraft.client.resource.language.I18n;
 import net.minecraft.item.ItemStack;
+import net.minecraft.nbt.NbtCompound;
+import net.minecraft.nbt.NbtElement;
+import net.minecraft.nbt.NbtList;
+import net.minecraft.nbt.NbtString;
+import net.minecraft.text.MutableText;
 import net.minecraft.text.Text;
+import net.minecraft.util.Formatting;
 import net.minecraft.util.Identifier;
 import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
@@ -37,6 +43,8 @@ public class JournalScreen extends Screen {
   private static final Identifier BACKGROUND_SPRITE = GuiUtil.sprite("background");
 
   private static final int BUTTON_SIZE = 14;
+  private static final int BUTTON_SPACING = 2;
+
   private static final int GRID_COLUMNS = 9;
   private static final int GRID_ROWS = 6;
   private static final int GRID_LEFT = 7;
@@ -87,6 +95,9 @@ public class JournalScreen extends Screen {
   private ButtonWidget vendorSortButton;
   private ButtonWidget inventoryToggleOnButton;
   private ButtonWidget inventoryToggleOffButton;
+  @Nullable
+  private UnlockedButtonWidget unlockedToggleButton;
+
   private NPCWidget npcWidget;
 
   private List<JournalItemStack> items = Collections.emptyList();
@@ -179,9 +190,9 @@ public class JournalScreen extends Screen {
 
     // Add warning if no journal
     if (Journal.INSTANCE == null) {
-       this.search.setEditable(false);
-       this.search.setText(I18n.translate("blockgamejournal.recipe_journal.no_journal"));
-       this.search.setUneditableColor(0xFF4040);
+      this.search.setEditable(false);
+      this.search.setText(I18n.translate("blockgamejournal.recipe_journal.no_journal"));
+      this.search.setUneditableColor(0xFF4040);
     }
 
     // Close button
@@ -261,6 +272,17 @@ public class JournalScreen extends Screen {
     this.inventoryToggleOffButton.visible = (this.currentMode == JournalMode.Type.ITEM_SEARCH || this.currentMode == JournalMode.Type.FAVORITES) && JournalScreen.useInventory;
     this.addDrawableChild(this.inventoryToggleOffButton);
 
+    // Unlocked Toggle Button
+    this.unlockedToggleButton = new UnlockedButtonWidget(
+        this.left + MENU_WIDTH - 3 * (3 + BUTTON_SIZE),
+        this.top + 5,
+        button -> {
+          this.refreshItems();
+        }
+    );
+    this.refreshUnlockToggleButton();
+    this.addDrawableChild(this.unlockedToggleButton);
+
     // Vendor sort button
     this.vendorSortButton = new TexturedButtonWidget(
         this.left + MENU_WIDTH - 2 * (3 + BUTTON_SIZE),
@@ -316,6 +338,7 @@ public class JournalScreen extends Screen {
             this.setSelectedIngredient(null);
 
             this.itemSortButton.visible = this.currentMode == JournalMode.Type.ITEM_SEARCH || this.currentMode == JournalMode.Type.FAVORITES;
+            this.refreshUnlockToggleButton();
             this.inventoryToggleOnButton.visible = this.itemSortButton.visible && !JournalScreen.useInventory;
             this.inventoryToggleOffButton.visible = this.itemSortButton.visible && JournalScreen.useInventory;
           }
@@ -352,7 +375,7 @@ public class JournalScreen extends Screen {
         titleText,
         this.left + TITLE_LEFT,
         this.top + TITLE_TOP,
-        MENU_WIDTH - (TITLE_LEFT * 2) - BUTTON_SIZE - 2,
+        MENU_WIDTH - (TITLE_LEFT * 2) - (2 * (BUTTON_SIZE - 2)),
         0x404040
     );
   }
@@ -387,6 +410,7 @@ public class JournalScreen extends Screen {
     this.updateItems(null);
     this.closeButton.visible = npc != null;
     this.vendorSortButton.visible = npc != null;
+    this.refreshUnlockToggleButton();
   }
 
   public void setSelectedIngredient(ItemStack ingredient) {
@@ -397,6 +421,7 @@ public class JournalScreen extends Screen {
 
     this.updateItems(null);
     this.closeButton.visible = ingredient != null;
+    this.refreshUnlockToggleButton();
   }
 
   @Override
@@ -446,25 +471,21 @@ public class JournalScreen extends Screen {
 
     if (this.currentMode == JournalMode.Type.ITEM_SEARCH) {
       this.showAllItems();
-    }
-    else if (this.currentMode == JournalMode.Type.NPC_SEARCH) {
+    } else if (this.currentMode == JournalMode.Type.NPC_SEARCH) {
       if (JournalScreen.selectedNpc == null) {
         this.showVendors();
       } else {
         this.showVendorItems();
       }
-    }
-    else if (this.currentMode == JournalMode.Type.FAVORITES) {
+    } else if (this.currentMode == JournalMode.Type.FAVORITES) {
       this.showFavorites();
-    }
-    else if (this.currentMode == JournalMode.Type.INGREDIENT_SEARCH) {
+    } else if (this.currentMode == JournalMode.Type.INGREDIENT_SEARCH) {
       if (JournalScreen.selectedIngredient == null) {
         this.showIngredients();
       } else {
         this.showIngredientItems();
       }
-    }
-    else {
+    } else {
       this.items = Collections.emptyList();
     }
     filter(filter);
@@ -475,10 +496,10 @@ public class JournalScreen extends Screen {
 
     this.items = Journal.INSTANCE.getEntries().entrySet()
         .stream()
-        .filter(entry -> entry.getValue().stream().anyMatch(e -> e.isFavorite() && this.inInventory(e)))
+        .filter(entry -> entry.getValue().stream().anyMatch(e -> e.isFavorite() && this.applyButtonFilters(e)))
         .map(entry -> JournalItemStack.fromKnownItem(entry.getKey()))
         .filter(Objects::nonNull)
-
+        .peek(this::adjustLoreNbt)
         .sorted((a, b) -> {
           if (JournalScreen.itemSort == ItemListWidget.ItemSort.A_TO_Z) {
             return a.getStack().getName().getString().compareToIgnoreCase(b.getStack().getName().getString());
@@ -495,9 +516,10 @@ public class JournalScreen extends Screen {
 
     this.items = Journal.INSTANCE.getEntries().entrySet()
         .stream()
-        .filter(entry -> entry.getValue().stream().anyMatch(this::inInventory))
+        .filter(entry -> entry.getValue().stream().anyMatch(this::applyButtonFilters))
         .map(entry -> JournalItemStack.fromKnownItem(entry.getKey()))
         .filter(Objects::nonNull)
+        .peek(this::adjustLoreNbt)
         .sorted((a, b) -> {
           if (JournalScreen.itemSort == ItemListWidget.ItemSort.A_TO_Z) {
             return a.getStack().getName().getString().compareToIgnoreCase(b.getStack().getName().getString());
@@ -535,6 +557,7 @@ public class JournalScreen extends Screen {
           if (JournalScreen.vendorItemSort == ItemListWidget.VendorSort.A_TO_Z) {
             JournalItemStack stack = JournalItemStack.fromKnownItem(entry.getKey());
             if (stack != null) {
+              this.adjustLoreNbt(stack);
               return List.of(stack);
             }
 
@@ -543,7 +566,14 @@ public class JournalScreen extends Screen {
 
           return entry.getValue().stream()
               .filter(this::isNpcNameMatching)
+              .filter(e -> {
+                if (UnlockedButtonWidget.isToggled()) {
+                  return !e.isLocked();
+                }
+                return true;
+              })
               .map((e) -> new JournalItemStack(e.getItem(), e.getSlot()))
+              .peek(this::adjustLoreNbt)
               .toList();
         })
         .flatMap(List::stream)
@@ -580,7 +610,14 @@ public class JournalScreen extends Screen {
         .filter(journalEntries -> journalEntries.stream().anyMatch(this::hasIngredient))
         .map(journalEntries -> journalEntries.stream()
             .filter(this::hasIngredient)
+            .filter(e -> {
+              if (UnlockedButtonWidget.isToggled()) {
+                return !e.isLocked();
+              }
+              return true;
+            })
             .map((e) -> new JournalItemStack(e.getItem(), e.getSlot()))
+            .peek(this::adjustLoreNbt)
             .toList()
         )
         .flatMap(List::stream)
@@ -618,19 +655,61 @@ public class JournalScreen extends Screen {
     return entry.getIngredients().containsKey(ItemUtil.getKey(selectedIngredient));
   }
 
-  private boolean inInventory(JournalEntry entry) {
-    // If not filtering by inventory, then always return true
-    if (!JournalScreen.useInventory) return true;
-
-    // If no ingredients, then it's not in inventory
-    if (entry.getIngredients().isEmpty()) {
+  private boolean applyButtonFilters(JournalEntry entry) {
+    if (UnlockedButtonWidget.isToggled() && entry.isLocked()) {
       return false;
     }
 
-    boolean hasEnough = true;
-    for (ItemStack item : entry.getIngredientItems()) {
-      hasEnough &= this.inventory.neededCount(item) <= 0;
+    if (JournalScreen.useInventory) {
+      // If no ingredients, then it's not in inventory
+      if (entry.getIngredients().isEmpty()) {
+        return false;
+      }
+
+      boolean hasEnough = true;
+      for (ItemStack item : entry.getIngredientItems()) {
+        hasEnough &= this.inventory.neededCount(item) <= 0;
+      }
+      return hasEnough;
     }
-    return hasEnough;
+
+    // If not filtering by inventory, then always return true
+    return true;
+  }
+
+  private void refreshUnlockToggleButton() {
+    if (this.unlockedToggleButton == null) {
+      return;
+    }
+
+    if (this.currentMode == JournalMode.Type.ITEM_SEARCH || this.currentMode == JournalMode.Type.FAVORITES) {
+      this.unlockedToggleButton.visible = true;
+      this.unlockedToggleButton.setX(this.left + MENU_WIDTH - 3 * (3 + BUTTON_SIZE));
+    } else if (this.currentMode == JournalMode.Type.NPC_SEARCH && JournalScreen.selectedNpc != null) {
+      this.unlockedToggleButton.visible = true;
+      this.unlockedToggleButton.setX(this.left + MENU_WIDTH - 3 * (3 + BUTTON_SIZE));
+    } else if (this.currentMode == JournalMode.Type.INGREDIENT_SEARCH && JournalScreen.selectedIngredient != null) {
+      this.unlockedToggleButton.visible = true;
+      this.unlockedToggleButton.setX(this.left + MENU_WIDTH - 2 * (3 + BUTTON_SIZE));
+    } else {
+      this.unlockedToggleButton.visible = false;
+    }
+  }
+
+  private void adjustLoreNbt(JournalItemStack jis) {
+    NbtCompound display = jis.getStack().getSubNbt(ItemStack.DISPLAY_KEY);
+    if (display != null) {
+      NbtList loreNbt = display.getList(ItemStack.LORE_KEY, NbtElement.STRING_TYPE);
+
+      loreNbt.add(NbtString.of(Text.Serializer.toJson(Text.literal(""))));
+
+      MutableText locateText = Text.literal(" ⚐ ").formatted(Formatting.GRAY)
+          .append(Text.literal("Right-click").formatted(Formatting.GREEN))
+          .append(Text.literal(" to toggle tracking").formatted(Formatting.GRAY));
+      locateText.setStyle(locateText.getStyle().withItalic(false));
+      loreNbt.add(NbtString.of(Text.Serializer.toJson(locateText)));
+
+      jis.getStack().getOrCreateSubNbt(ItemStack.DISPLAY_KEY).put(ItemStack.LORE_KEY, loreNbt);
+    }
   }
 }

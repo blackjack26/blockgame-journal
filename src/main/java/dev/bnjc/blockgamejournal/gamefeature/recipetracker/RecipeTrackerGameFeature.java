@@ -280,7 +280,6 @@ public class RecipeTrackerGameFeature extends GameFeature {
 
     if (cleanedMessage.startsWith("[RECIPE]") && lastRecipeName != null) {
       Journal.INSTANCE.getMetadata().setKnownRecipe("mmoitems:" + lastRecipeName, true);
-      LOGGER.info("[Blockgame Journal] Learned recipe: mmoitems:{}", lastRecipeName);
     }
 
     return ActionResult.PASS;

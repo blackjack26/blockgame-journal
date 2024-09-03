@@ -344,21 +344,16 @@ public class RecipeWidget extends ClickableWidget {
   }
 
   private void renderRequiredClass(DrawContext context, int mouseX, int mouseY) {
-    if (this.entry == null || this.entry.getRequiredLevel() == -1) {
+    if (this.entry == null || this.entry.getRequiredLevel() == -1 || Journal.INSTANCE == null) {
       return;
     }
 
     int x = this.getX();
+    context.drawItem(Profession.getIcon(entry.getRequiredClass()), x, this.lastY);
 
-    Profession profession = Profession.fromClass(entry.getRequiredClass());
-    if (profession == null) {
-      return;
-    }
-
-    context.drawItem(new ItemStack(profession.getItem()), x, this.lastY);
-
+    @Nullable Integer profLevel = Journal.INSTANCE.getMetadata().getProfessionLevels().get(entry.getRequiredClass());
     MutableText text = Text.empty();
-    if (Journal.INSTANCE == null || Journal.INSTANCE.getMetadata().getProfessionLevels().get(entry.getRequiredClass()) == null) {
+    if (profLevel == null) {
       text.append(Text.literal("?").formatted(Formatting.DARK_PURPLE, Formatting.BOLD));
 
       if (mouseX >= x && mouseX < x + this.getWidth() && mouseY >= this.lastY && mouseY < this.lastY + 16) {
@@ -371,7 +366,7 @@ public class RecipeWidget extends ClickableWidget {
         tooltip.add(Text.literal("to update your professions").formatted(Formatting.GRAY));
       }
 
-    } else if (Journal.INSTANCE.getMetadata().getProfessionLevels().get(entry.getRequiredClass()) >= entry.getRequiredLevel()) {
+    } else if (profLevel >= entry.getRequiredLevel()) {
       text.append(Text.literal("✔").formatted(Formatting.DARK_GREEN));
     } else {
       text.append(Text.literal("✖").formatted(Formatting.DARK_RED));

@@ -1,6 +1,5 @@
 package dev.bnjc.blockgamejournal.gui.widget;
 
-import dev.bnjc.blockgamejournal.BlockgameJournal;
 import dev.bnjc.blockgamejournal.gui.screen.JournalScreen;
 import dev.bnjc.blockgamejournal.gui.screen.TrackingScreen;
 import dev.bnjc.blockgamejournal.journal.Journal;
@@ -18,11 +17,13 @@ import net.minecraft.client.gui.screen.Screen;
 import net.minecraft.client.gui.screen.narration.NarrationMessageBuilder;
 import net.minecraft.client.gui.tooltip.Tooltip;
 import net.minecraft.client.gui.widget.TexturedButtonWidget;
+import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
 import net.minecraft.item.Items;
 import net.minecraft.text.MutableText;
 import net.minecraft.text.Text;
 import net.minecraft.util.Formatting;
+import org.jetbrains.annotations.Nullable;
 
 import java.util.*;
 
@@ -240,25 +241,25 @@ public class TrackingWidget extends ScrollableViewWidget {
   }
 
   private void renderRequiredProfessions(DrawContext context, Map<String, Integer> professions) {
-    if (professions.isEmpty()) {
+    if (professions.isEmpty() || Journal.INSTANCE == null) {
       return;
     }
 
     int x = this.getX() + xOffset;
 
     for (Map.Entry<String, Integer> profEntry : professions.entrySet()) {
-      Profession profession = Profession.fromClass(profEntry.getKey());
-      if (profession == null) {
+      if (profEntry.getValue() == null || profEntry.getValue() == -1) {
         continue;
       }
 
-      context.drawItem(new ItemStack(profession.getItem()), x, this.lastY);
+      context.drawItem(Profession.getIcon(profEntry.getKey()), x, this.lastY);
 
       boolean obtained = false;
       MutableText text = Text.empty();
-      if (Journal.INSTANCE == null || Journal.INSTANCE.getMetadata().getProfessionLevels().get(profEntry.getKey()) == null) {
+      @Nullable Integer profLevel = Journal.INSTANCE.getMetadata().getProfessionLevels().get(profEntry.getKey());
+      if (profLevel == null) {
         text.append(Text.literal("? ").formatted(Formatting.DARK_PURPLE, Formatting.BOLD));
-      } else if (Journal.INSTANCE.getMetadata().getProfessionLevels().get(profEntry.getKey()) >= profEntry.getValue()) {
+      } else if (profLevel >= profEntry.getValue()) {
         obtained = true;
         text.append(Text.literal("✔ ").formatted(Formatting.DARK_GREEN));
       } else {

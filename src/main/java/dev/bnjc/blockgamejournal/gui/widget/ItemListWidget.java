@@ -30,10 +30,7 @@ import net.minecraft.util.Identifier;
 import net.minecraft.util.math.MathHelper;
 import org.jetbrains.annotations.Nullable;
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-import java.util.Locale;
+import java.util.*;
 
 import static dev.bnjc.blockgamejournal.gui.screen.JournalScreen.GRID_SLOT_SIZE;
 
@@ -53,6 +50,7 @@ public class ItemListWidget extends ClickableWidget {
 
   @Setter
   private boolean hideTooltip;
+  private int lastButton = -1;
 
   public ItemListWidget(Screen parent, int x, int y, int gridWidth, int gridHeight) {
     super(x, y, gridWidth * GRID_SLOT_SIZE, gridHeight * GRID_SLOT_SIZE, Text.empty());
@@ -84,6 +82,12 @@ public class ItemListWidget extends ClickableWidget {
   }
 
   @Override
+  protected boolean isValidClickButton(int button) {
+    this.lastButton = button;
+    return button == 0 || button == 1;
+  }
+
+  @Override
   public void onClick(double mouseX, double mouseY) {
     List<JournalItemStack> items = this.getOffsetItems();
     int x = (int) ((mouseX - this.getX()) / GRID_SLOT_SIZE);
@@ -108,62 +112,81 @@ public class ItemListWidget extends ClickableWidget {
     }
 
     BlockgameJournal.LOGGER.debug("Clicked item: {}, Slot: {}", item, index);
+    if (item == null) {
+      return;
+    }
 
-    if (item != null) {
-      if (this.mode == JournalMode.Type.ITEM_SEARCH) {
-        // Open RecipeDisplay screen
-        MinecraftClient.getInstance().setScreen(new RecipeScreen(item, this.parent));
+    if (this.lastButton == 1) {
+      if (this.mode == JournalMode.Type.FAVORITES ||
+          this.mode == JournalMode.Type.ITEM_SEARCH ||
+          (this.mode == JournalMode.Type.NPC_SEARCH && JournalScreen.getSelectedNpc() != null) ||
+          (this.mode == JournalMode.Type.INGREDIENT_SEARCH && JournalScreen.getSelectedIngredient() != null)) {
+
+        @Nullable JournalEntry entry = Journal.INSTANCE.getFirstJournalEntry(ItemUtil.getKey(item));
+        if (entry != null) {
+          entry.setTracked(!entry.isTracked());
+          JournalScreen js = getJournalScreen();
+          if (js != null) {
+            js.refreshTracking();
+          }
+          return;
+        }
       }
-      else if (this.mode == JournalMode.Type.FAVORITES) {
+    }
+
+    if (this.mode == JournalMode.Type.ITEM_SEARCH) {
+      // Open RecipeDisplay screen
+      MinecraftClient.getInstance().setScreen(new RecipeScreen(item, this.parent));
+    }
+    else if (this.mode == JournalMode.Type.FAVORITES) {
+      RecipeScreen recipeScreen = new RecipeScreen(item, this.parent);
+      recipeScreen.filterEntries(JournalEntry::isFavorite);
+
+      MinecraftClient.getInstance().setScreen(recipeScreen);
+    }
+    else if (this.mode == JournalMode.Type.NPC_SEARCH) {
+      if (item.getItem() instanceof PlayerHeadItem || item.getItem() instanceof SpawnEggItem) {
+        if (this.parent instanceof JournalScreen journalScreen && item.hasNbt()) {
+          journalScreen.setSelectedNpc(item.getNbt().getString(Journal.NPC_NAME_KEY));
+        }
+      } else {
         RecipeScreen recipeScreen = new RecipeScreen(item, this.parent);
-        recipeScreen.filterEntries(JournalEntry::isFavorite);
+        NPCEntity selectedNpc = JournalScreen.getSelectedNpc();
+        recipeScreen.filterEntries(entry -> {
+          if (selectedNpc == null) {
+            // If no NPC is selected, show all recipes
+            return true;
+          }
+
+          // Only show recipes that the selected NPC can craft
+          boolean isNpc = entry.getNpcName().equals(selectedNpc.getNpcWorldName());
+
+          if (useSlotPositions()) {
+            return entry.getSlot() == index && isNpc;
+          }
+
+          return isNpc;
+        });
 
         MinecraftClient.getInstance().setScreen(recipeScreen);
       }
-      else if (this.mode == JournalMode.Type.NPC_SEARCH) {
-        if (item.getItem() instanceof PlayerHeadItem || item.getItem() instanceof SpawnEggItem) {
-          if (this.parent instanceof JournalScreen journalScreen && item.hasNbt()) {
-            journalScreen.setSelectedNpc(item.getNbt().getString(Journal.NPC_NAME_KEY));
+    }
+    else if (this.mode == JournalMode.Type.INGREDIENT_SEARCH) {
+      if (this.parent instanceof JournalScreen journalScreen && JournalScreen.getSelectedIngredient() == null) {
+        journalScreen.setSelectedIngredient(item);
+      } else {
+        RecipeScreen recipeScreen = new RecipeScreen(item, this.parent);
+        recipeScreen.filterEntries(entry -> {
+          if (JournalScreen.getSelectedIngredient() == null) {
+            // If no ingredient is selected, show all recipes
+            return true;
           }
-        } else {
-          RecipeScreen recipeScreen = new RecipeScreen(item, this.parent);
-          NPCEntity selectedNpc = JournalScreen.getSelectedNpc();
-          recipeScreen.filterEntries(entry -> {
-            if (selectedNpc == null) {
-              // If no NPC is selected, show all recipes
-              return true;
-            }
 
-            // Only show recipes that the selected NPC can craft
-            boolean isNpc = entry.getNpcName().equals(selectedNpc.getNpcWorldName());
+          // Only show recipes that use the selected ingredient
+          return entry.getIngredients().containsKey(ItemUtil.getKey(JournalScreen.getSelectedIngredient()));
+        });
 
-            if (useSlotPositions()) {
-              return entry.getSlot() == index && isNpc;
-            }
-
-            return isNpc;
-          });
-
-          MinecraftClient.getInstance().setScreen(recipeScreen);
-        }
-      }
-      else if (this.mode == JournalMode.Type.INGREDIENT_SEARCH) {
-        if (this.parent instanceof JournalScreen journalScreen && JournalScreen.getSelectedIngredient() == null) {
-          journalScreen.setSelectedIngredient(item);
-        } else {
-          RecipeScreen recipeScreen = new RecipeScreen(item, this.parent);
-          recipeScreen.filterEntries(entry -> {
-            if (JournalScreen.getSelectedIngredient() == null) {
-              // If no ingredient is selected, show all recipes
-              return true;
-            }
-
-            // Only show recipes that use the selected ingredient
-            return entry.getIngredients().containsKey(ItemUtil.getKey(JournalScreen.getSelectedIngredient()));
-          });
-
-          MinecraftClient.getInstance().setScreen(recipeScreen);
-        }
+        MinecraftClient.getInstance().setScreen(recipeScreen);
       }
     }
   }
@@ -497,6 +520,19 @@ public class ItemListWidget extends ClickableWidget {
 
   private boolean useSlotPositions() {
     return JournalScreen.getVendorItemSort() == VendorSort.SLOT && this.mode == JournalMode.Type.NPC_SEARCH && JournalScreen.getSelectedNpc() != null;
+  }
+
+  private @Nullable JournalScreen getJournalScreen() {
+    Screen p = this.parent;
+    while (p instanceof RecipeScreen rs) {
+      p = rs.getParent();
+    }
+
+    if (p instanceof JournalScreen journalScreen) {
+      return journalScreen;
+    }
+
+    return null;
   }
 
   public enum VendorSort {
