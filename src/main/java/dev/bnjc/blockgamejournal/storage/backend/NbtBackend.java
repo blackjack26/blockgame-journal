@@ -113,7 +113,7 @@ public class NbtBackend extends FileBasedBackend {
     Path npcPath = STORAGE_DIR.resolve(NPC_CACHE_NAME + extension());
     var npcResult = Timer.time(() -> FileUtil.loadFromNbt(Journal.KNOWN_NPCS_CODEC, npcPath));
     if (npcResult.getFirst().isPresent()) {
-      LOGGER.info("[Blockgame Journal] Loaded NPCs {} in {}ns", npcPath, npcResult.getSecond());
+      LOGGER.info("[Blockgame Journal] Loaded vendors {} in {}ns", npcPath, npcResult.getSecond());
       return npcResult.getFirst().get();
     }
 

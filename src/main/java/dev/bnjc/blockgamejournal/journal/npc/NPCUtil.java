@@ -4,12 +4,13 @@ import dev.bnjc.blockgamejournal.gui.toast.VendorToast;
 import dev.bnjc.blockgamejournal.journal.Journal;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.entity.Entity;
+import org.jetbrains.annotations.NotNull;
 
 import java.util.HashSet;
 import java.util.Set;
 
 public final class NPCUtil {
-  public static void createOrUpdate(String name, Entity entity) {
+  public static void createOrUpdate(String name, @NotNull Entity entity) {
     if (Journal.INSTANCE == null) {
       return;
     }

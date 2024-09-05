@@ -59,6 +59,16 @@ public class JournalPlayerInventory {
     return count - inventoryStack.getCount();
   }
 
+  public int count(ItemStack stack) {
+    String key = ItemUtil.getKey(stack);
+    ItemStack inventoryStack = this.inventory.get(key);
+    if (inventoryStack == null) {
+      return 0;
+    }
+
+    return inventoryStack.getCount();
+  }
+
   public int consume(ItemStack stack, int count) {
     String key = ItemUtil.getKey(stack);
     ItemStack inventoryStack = this.editableInventory.get(key);

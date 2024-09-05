@@ -125,232 +125,17 @@ public class JournalScreen extends Screen {
 
     super.init();
 
-    // Known Recipes
-    TexturedButtonWidget learnedRecipesButton = new TexturedButtonWidget(
-        this.width - 24,
-        8,
-        16,
-        16,
-        new ButtonTextures(GuiUtil.sprite("learned_recipe_icon"), GuiUtil.sprite("learned_recipe_icon")),
-        (button) -> {
-          MinecraftClient.getInstance().setScreen(new LearnedRecipesScreen(this));
-        }
-    );
-    learnedRecipesButton.setTooltip(Tooltip.of(Text.literal("View Learned Recipes")));
-    this.addDrawableChild(learnedRecipesButton);
-
-    // Tracking
-    this.trackingWidget = new TrackingWidget(
-        this,
-        0,
-        0,
-        left - MODE_ICON_OFFSET - 10,
-        this.height
-    );
-    this.addDrawableChild(this.trackingWidget);
-    this.refreshTracking();
-
-    // Items
-    this.itemList = new ItemListWidget(this, left + GRID_LEFT, top + GRID_TOP, GRID_COLUMNS, GRID_ROWS);
-
-    // Scroll
-    this.scroll = this.addDrawableChild(new VerticalScrollWidget(
-        left + MENU_WIDTH - 19,
-        top + GRID_TOP,
-        this.itemList.getHeight(),
-        Text.empty()
-    ));
-    this.scroll.setResponder(this.itemList::onScroll);
-
-    this.addDrawableChild(this.itemList);
-
-    // Search
-    boolean shouldFocusSearch = this.search == null || this.search.isFocused();
-//    shouldFocusSearch &= config.autofocusSearch;
-    this.search = this.addDrawableChild(new SearchWidget(
-        textRenderer,
-        left + SEARCH_LEFT,
-        top + SEARCH_TOP,
-        MENU_WIDTH - (SEARCH_LEFT * 2),
-        12,
-        this.search,
-        SearchWidget.SEARCH_MESSAGE
-    ));
-    this.search.setPlaceholder(SearchWidget.SEARCH_MESSAGE);
-    this.search.setDrawsBackground(false);
-    this.search.setChangedListener(this::filter);
-    this.search.setEditableColor(0xFFFFFF);
-    this.search.setText(JournalScreen.lastSearch);
-
-    if (shouldFocusSearch) {
-      this.setInitialFocus(this.search);
-    }
-
-    this.updateItems(this.search.getText());
-
-    // Add warning if no journal
-    if (Journal.INSTANCE == null) {
-      this.search.setEditable(false);
-      this.search.setText(I18n.translate("blockgamejournal.recipe_journal.no_journal"));
-      this.search.setUneditableColor(0xFF4040);
-    }
-
-    // Close button
-    this.closeButton = GuiUtil.close(
-        this.left + MENU_WIDTH - (3 + BUTTON_SIZE),
-        this.top + 5,
-        button -> {
-          this.setSelectedNpc(null);
-          this.setSelectedIngredient(null);
-          JournalScreen.useInventory = false;
-        }
-    );
-    this.closeButton.visible = JournalScreen.selectedNpc != null || JournalScreen.selectedIngredient != null;
-    this.addDrawableChild(this.closeButton);
-
-    // Item sort button
-    this.itemSortButton = new TexturedButtonWidget(
-        this.left + MENU_WIDTH - (3 + BUTTON_SIZE),
-        this.top + 5,
-        12,
-        12,
-        new ButtonTextures(GuiUtil.sprite("widgets/sort/button"), GuiUtil.sprite("widgets/sort/button_highlighted")),
-        button -> {
-          switch (JournalScreen.itemSort) {
-            case NONE:
-              JournalScreen.itemSort = ItemListWidget.ItemSort.A_TO_Z;
-              break;
-            case A_TO_Z:
-              JournalScreen.itemSort = ItemListWidget.ItemSort.Z_TO_A;
-              break;
-            case Z_TO_A:
-              JournalScreen.itemSort = ItemListWidget.ItemSort.NONE;
-              break;
-          }
-
-          this.itemSortButton.setTooltip(Tooltip.of(Text.translatable("blockgamejournal.sort." + JournalScreen.itemSort.name())));
-          this.refreshItems();
-        }
-    );
-    this.itemSortButton.setTooltip(Tooltip.of(Text.translatable("blockgamejournal.sort." + JournalScreen.itemSort.name())));
-    this.itemSortButton.visible = this.currentMode == JournalMode.Type.ITEM_SEARCH || this.currentMode == JournalMode.Type.FAVORITES;
-    this.addDrawableChild(this.itemSortButton);
-
-    // Inventory toggle on button
-    this.inventoryToggleOnButton = new TexturedButtonWidget(
-        this.left + MENU_WIDTH - 2 * (3 + BUTTON_SIZE),
-        this.top + 5,
-        12,
-        12,
-        new ButtonTextures(GuiUtil.sprite("widgets/inventory/button_on"), GuiUtil.sprite("widgets/inventory/button_on_highlighted")),
-        button -> {
-          JournalScreen.useInventory = true;
-          this.inventoryToggleOnButton.visible = false;
-          this.inventoryToggleOffButton.visible = true;
-          this.refreshItems();
-        }
-    );
-    this.inventoryToggleOnButton.setTooltip(Tooltip.of(Text.translatable("blockgamejournal.filter.inventory.false")));
-    this.inventoryToggleOnButton.visible = (this.currentMode == JournalMode.Type.ITEM_SEARCH || this.currentMode == JournalMode.Type.FAVORITES) && !JournalScreen.useInventory;
-    this.addDrawableChild(this.inventoryToggleOnButton);
-
-    // Inventory toggle off button
-    this.inventoryToggleOffButton = new TexturedButtonWidget(
-        this.left + MENU_WIDTH - 2 * (3 + BUTTON_SIZE),
-        this.top + 5,
-        12,
-        12,
-        new ButtonTextures(GuiUtil.sprite("widgets/inventory/button_off"), GuiUtil.sprite("widgets/inventory/button_off_highlighted")),
-        button -> {
-          JournalScreen.useInventory = false;
-          this.inventoryToggleOnButton.visible = true;
-          this.inventoryToggleOffButton.visible = false;
-          this.refreshItems();
-        }
-    );
-    this.inventoryToggleOffButton.setTooltip(Tooltip.of(Text.translatable("blockgamejournal.filter.inventory.true")));
-    this.inventoryToggleOffButton.visible = (this.currentMode == JournalMode.Type.ITEM_SEARCH || this.currentMode == JournalMode.Type.FAVORITES) && JournalScreen.useInventory;
-    this.addDrawableChild(this.inventoryToggleOffButton);
-
-    // Unlocked Toggle Button
-    this.unlockedToggleButton = new UnlockedButtonWidget(
-        this.left + MENU_WIDTH - 3 * (3 + BUTTON_SIZE),
-        this.top + 5,
-        button -> {
-          this.refreshItems();
-        }
-    );
-    this.refreshUnlockToggleButton();
-    this.addDrawableChild(this.unlockedToggleButton);
-
-    // Vendor sort button
-    this.vendorSortButton = new TexturedButtonWidget(
-        this.left + MENU_WIDTH - 2 * (3 + BUTTON_SIZE),
-        this.top + 5,
-        12,
-        12,
-        new ButtonTextures(GuiUtil.sprite("widgets/sort/button"), GuiUtil.sprite("widgets/sort/button_highlighted")),
-        button -> {
-          JournalScreen.vendorItemSort = JournalScreen.vendorItemSort == ItemListWidget.VendorSort.A_TO_Z ? ItemListWidget.VendorSort.SLOT : ItemListWidget.VendorSort.A_TO_Z;
-          this.vendorSortButton.setTooltip(Tooltip.of(Text.translatable("blockgamejournal.sort." + JournalScreen.vendorItemSort.name())));
-          this.refreshItems();
-        }
-    );
-    this.vendorSortButton.setTooltip(Tooltip.of(Text.translatable("blockgamejournal.sort." + JournalScreen.vendorItemSort.name())));
-    this.vendorSortButton.visible = JournalScreen.selectedNpc != null;
-    this.addDrawableChild(this.vendorSortButton);
-
-    // NPC Widget
-    this.npcWidget = new NPCWidget(JournalScreen.selectedNpc, this.left + MENU_WIDTH + 4, this.top, 68, 74);
-    this.addDrawableChild(this.npcWidget);
-
-    ///// Mode Buttons
-    Map<JournalMode.Type, ModeButton> buttons = new HashMap<>();
-
-    var modes = JournalMode.MODES.values().stream()
-        .sorted(Comparator.comparing(JournalMode::order))
-        .toList();
-
-    for (int index = 0; index < modes.size(); index++) {
-      JournalMode mode = modes.get(index);
-      ItemStack stack = new ItemStack(mode.icon());
-
-      ItemStack mmc = Journal.INSTANCE.getKnownNpcItem("Franky");
-      if (mode.type() == JournalMode.Type.NPC_SEARCH && mmc != null) {
-        stack = mmc;
-      }
-
-      ModeButton modeButton = this.addDrawableChild(new ModeButton(
-          stack,
-          this.left - MODE_ICON_OFFSET,
-          this.top + index * MODE_ICON_SPACING + 1,
-          button -> {
-            // Un-highlight old
-            if (buttons.containsKey(this.currentMode)) {
-              buttons.get(this.currentMode).setHighlighted(false);
-            }
-
-            // Highlight new
-            this.currentMode = mode.type();
-            buttons.get(this.currentMode).setHighlighted(true);
-
-            this.setSelectedNpc(null);
-            this.setSelectedIngredient(null);
-
-            this.itemSortButton.visible = this.currentMode == JournalMode.Type.ITEM_SEARCH || this.currentMode == JournalMode.Type.FAVORITES;
-            this.refreshUnlockToggleButton();
-            this.inventoryToggleOnButton.visible = this.itemSortButton.visible && !JournalScreen.useInventory;
-            this.inventoryToggleOffButton.visible = this.itemSortButton.visible && JournalScreen.useInventory;
-          }
-      ));
-      modeButton.setTooltip(Tooltip.of(Text.translatable("blockgamejournal.mode." + mode.type().name())));
-      buttons.put(mode.type(), modeButton);
-    }
-
-    // Mode button highlighting
-    if (buttons.containsKey(this.currentMode)) {
-      buttons.get(this.currentMode).setHighlighted(true);
-    }
+    this.initLearnedRecipesButton();
+    this.initTrackingWidget();
+    this.initItemListWidget();
+    this.initSearchWidget();
+    this.initCloseButton();
+    this.initItemSortButton();
+    this.initInventoryToggleButton();
+    this.initUnlockedToggleButton();
+    this.initVendorSortButton();
+    this.initVendorWidget();
+    this.initModeButtons();
   }
 
   @Override
@@ -461,6 +246,252 @@ public class JournalScreen extends Screen {
         .toList()
     );
   }
+
+  // region Init Helpers
+
+  private void initLearnedRecipesButton() {
+    TexturedButtonWidget learnedRecipesButton = new TexturedButtonWidget(
+        this.width - 24,
+        8,
+        16,
+        16,
+        new ButtonTextures(GuiUtil.sprite("learned_recipe_icon"), GuiUtil.sprite("learned_recipe_icon")),
+        (button) -> {
+          MinecraftClient.getInstance().setScreen(new LearnedRecipesScreen(this));
+        }
+    );
+    learnedRecipesButton.setTooltip(Tooltip.of(Text.literal("View Learned Recipes")));
+    this.addDrawableChild(learnedRecipesButton);
+  }
+
+  private void initTrackingWidget() {
+    this.trackingWidget = new TrackingWidget(
+        this,
+        0,
+        0,
+        left - MODE_ICON_OFFSET - 10,
+        this.height
+    );
+    this.addDrawableChild(this.trackingWidget);
+    this.refreshTracking();
+  }
+
+  private void initItemListWidget() {
+    // Items
+    this.itemList = new ItemListWidget(this, left + GRID_LEFT, top + GRID_TOP, GRID_COLUMNS, GRID_ROWS);
+
+    // Scroll
+    this.scroll = this.addDrawableChild(new VerticalScrollWidget(
+        left + MENU_WIDTH - 19,
+        top + GRID_TOP,
+        this.itemList.getHeight(),
+        Text.empty(),
+        () -> this.itemList.getRows() - 5
+    ));
+    this.scroll.setResponder(this.itemList::onScroll);
+    this.addDrawableChild(this.itemList);
+
+    this.itemList.setScroll(this.scroll);
+  }
+
+  private void initSearchWidget() {
+    boolean shouldFocusSearch = this.search == null || this.search.isFocused();
+//    shouldFocusSearch &= config.autofocusSearch;
+    this.search = this.addDrawableChild(new SearchWidget(
+        textRenderer,
+        left + SEARCH_LEFT,
+        top + SEARCH_TOP,
+        MENU_WIDTH - (SEARCH_LEFT * 2),
+        12,
+        this.search,
+        SearchWidget.SEARCH_MESSAGE
+    ));
+    this.search.setPlaceholder(SearchWidget.SEARCH_MESSAGE);
+    this.search.setDrawsBackground(false);
+    this.search.setChangedListener(this::filter);
+    this.search.setEditableColor(0xFFFFFF);
+    this.search.setText(JournalScreen.lastSearch);
+
+    if (shouldFocusSearch) {
+      this.setInitialFocus(this.search);
+    }
+
+    this.updateItems(this.search.getText());
+
+    // Add warning if no journal
+    if (Journal.INSTANCE == null) {
+      this.search.setEditable(false);
+      this.search.setText(I18n.translate("blockgamejournal.recipe_journal.no_journal"));
+      this.search.setUneditableColor(0xFF4040);
+    }
+  }
+
+  private void initCloseButton() {
+    this.closeButton = GuiUtil.close(
+        this.left + MENU_WIDTH - (3 + BUTTON_SIZE),
+        this.top + 5,
+        button -> {
+          this.setSelectedNpc(null);
+          this.setSelectedIngredient(null);
+          JournalScreen.useInventory = false;
+        }
+    );
+    this.closeButton.visible = JournalScreen.selectedNpc != null || JournalScreen.selectedIngredient != null;
+    this.addDrawableChild(this.closeButton);
+  }
+
+  private void initItemSortButton() {
+    this.itemSortButton = new TexturedButtonWidget(
+        this.left + MENU_WIDTH - (3 + BUTTON_SIZE),
+        this.top + 5,
+        12,
+        12,
+        new ButtonTextures(GuiUtil.sprite("widgets/sort/button"), GuiUtil.sprite("widgets/sort/button_highlighted")),
+        button -> {
+          switch (JournalScreen.itemSort) {
+            case NONE:
+              JournalScreen.itemSort = ItemListWidget.ItemSort.A_TO_Z;
+              break;
+            case A_TO_Z:
+              JournalScreen.itemSort = ItemListWidget.ItemSort.Z_TO_A;
+              break;
+            case Z_TO_A:
+              JournalScreen.itemSort = ItemListWidget.ItemSort.NONE;
+              break;
+          }
+
+          this.itemSortButton.setTooltip(Tooltip.of(Text.translatable("blockgamejournal.sort." + JournalScreen.itemSort.name())));
+          this.refreshItems();
+        }
+    );
+    this.itemSortButton.setTooltip(Tooltip.of(Text.translatable("blockgamejournal.sort." + JournalScreen.itemSort.name())));
+    this.itemSortButton.visible = this.currentMode == JournalMode.Type.ITEM_SEARCH || this.currentMode == JournalMode.Type.FAVORITES;
+    this.addDrawableChild(this.itemSortButton);
+  }
+
+  private void initInventoryToggleButton() {
+    // Inventory toggle on button
+    this.inventoryToggleOnButton = new TexturedButtonWidget(
+        this.left + MENU_WIDTH - 2 * (3 + BUTTON_SIZE),
+        this.top + 5,
+        12,
+        12,
+        new ButtonTextures(GuiUtil.sprite("widgets/inventory/button_on"), GuiUtil.sprite("widgets/inventory/button_on_highlighted")),
+        button -> {
+          JournalScreen.useInventory = true;
+          this.inventoryToggleOnButton.visible = false;
+          this.inventoryToggleOffButton.visible = true;
+          this.refreshItems();
+        }
+    );
+    this.inventoryToggleOnButton.setTooltip(Tooltip.of(Text.translatable("blockgamejournal.filter.inventory.false")));
+    this.inventoryToggleOnButton.visible = (this.currentMode == JournalMode.Type.ITEM_SEARCH || this.currentMode == JournalMode.Type.FAVORITES) && !JournalScreen.useInventory;
+    this.addDrawableChild(this.inventoryToggleOnButton);
+
+    // Inventory toggle off button
+    this.inventoryToggleOffButton = new TexturedButtonWidget(
+        this.left + MENU_WIDTH - 2 * (3 + BUTTON_SIZE),
+        this.top + 5,
+        12,
+        12,
+        new ButtonTextures(GuiUtil.sprite("widgets/inventory/button_off"), GuiUtil.sprite("widgets/inventory/button_off_highlighted")),
+        button -> {
+          JournalScreen.useInventory = false;
+          this.inventoryToggleOnButton.visible = true;
+          this.inventoryToggleOffButton.visible = false;
+          this.refreshItems();
+        }
+    );
+    this.inventoryToggleOffButton.setTooltip(Tooltip.of(Text.translatable("blockgamejournal.filter.inventory.true")));
+    this.inventoryToggleOffButton.visible = (this.currentMode == JournalMode.Type.ITEM_SEARCH || this.currentMode == JournalMode.Type.FAVORITES) && JournalScreen.useInventory;
+    this.addDrawableChild(this.inventoryToggleOffButton);
+  }
+
+  private void initUnlockedToggleButton() {
+    this.unlockedToggleButton = new UnlockedButtonWidget(
+        this.left + MENU_WIDTH - 3 * (3 + BUTTON_SIZE),
+        this.top + 5,
+        button -> {
+          this.refreshItems();
+        }
+    );
+    this.refreshUnlockToggleButton();
+    this.addDrawableChild(this.unlockedToggleButton);
+  }
+
+  private void initVendorSortButton() {
+    this.vendorSortButton = new TexturedButtonWidget(
+        this.left + MENU_WIDTH - 2 * (3 + BUTTON_SIZE),
+        this.top + 5,
+        12,
+        12,
+        new ButtonTextures(GuiUtil.sprite("widgets/sort/button"), GuiUtil.sprite("widgets/sort/button_highlighted")),
+        button -> {
+          JournalScreen.vendorItemSort = JournalScreen.vendorItemSort == ItemListWidget.VendorSort.A_TO_Z ? ItemListWidget.VendorSort.SLOT : ItemListWidget.VendorSort.A_TO_Z;
+          this.vendorSortButton.setTooltip(Tooltip.of(Text.translatable("blockgamejournal.sort." + JournalScreen.vendorItemSort.name())));
+          this.refreshItems();
+        }
+    );
+    this.vendorSortButton.setTooltip(Tooltip.of(Text.translatable("blockgamejournal.sort." + JournalScreen.vendorItemSort.name())));
+    this.vendorSortButton.visible = JournalScreen.selectedNpc != null;
+    this.addDrawableChild(this.vendorSortButton);
+  }
+
+  private void initVendorWidget() {
+    this.npcWidget = new NPCWidget(JournalScreen.selectedNpc, this.left + MENU_WIDTH + 4, this.top, 68, 74);
+    this.addDrawableChild(this.npcWidget);
+  }
+
+  private void initModeButtons() {
+    Map<JournalMode.Type, ModeButton> buttons = new HashMap<>();
+
+    var modes = JournalMode.MODES.values().stream()
+        .sorted(Comparator.comparing(JournalMode::order))
+        .toList();
+
+    for (int index = 0; index < modes.size(); index++) {
+      JournalMode mode = modes.get(index);
+      ItemStack stack = new ItemStack(mode.icon());
+
+      ItemStack mmc = Journal.INSTANCE.getKnownNpcItem("Franky");
+      if (mode.type() == JournalMode.Type.NPC_SEARCH && mmc != null) {
+        stack = mmc;
+      }
+
+      ModeButton modeButton = this.addDrawableChild(new ModeButton(
+          stack,
+          this.left - MODE_ICON_OFFSET,
+          this.top + index * MODE_ICON_SPACING + 1,
+          button -> {
+            // Un-highlight old
+            if (buttons.containsKey(this.currentMode)) {
+              buttons.get(this.currentMode).setHighlighted(false);
+            }
+
+            // Highlight new
+            this.currentMode = mode.type();
+            buttons.get(this.currentMode).setHighlighted(true);
+
+            this.setSelectedNpc(null);
+            this.setSelectedIngredient(null);
+
+            this.itemSortButton.visible = this.currentMode == JournalMode.Type.ITEM_SEARCH || this.currentMode == JournalMode.Type.FAVORITES;
+            this.refreshUnlockToggleButton();
+            this.inventoryToggleOnButton.visible = this.itemSortButton.visible && !JournalScreen.useInventory;
+            this.inventoryToggleOffButton.visible = this.itemSortButton.visible && JournalScreen.useInventory;
+          }
+      ));
+      modeButton.setTooltip(Tooltip.of(Text.translatable("blockgamejournal.mode." + mode.type().name())));
+      buttons.put(mode.type(), modeButton);
+    }
+
+    // Mode button highlighting
+    if (buttons.containsKey(this.currentMode)) {
+      buttons.get(this.currentMode).setHighlighted(true);
+    }
+  }
+
+  // endregion Init Helpers
 
   private void updateItems(String filter) {
     if (Journal.INSTANCE == null) {
@@ -630,7 +661,9 @@ public class JournalScreen extends Screen {
 
     List<JournalItemStack> filtered;
     if (filter == null || filter.isEmpty()) {
-      filtered = this.items;
+      filtered = this.items.stream()
+          .filter(item -> !item.getStack().isEmpty()) // Filter out empty items
+          .toList();
     } else {
       filtered = this.items.stream()
           .filter(item -> SearchUtil.defaultPredicate(item.getStack(), filter) && !item.getStack().isEmpty())

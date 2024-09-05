@@ -1,5 +1,6 @@
 package dev.bnjc.blockgamejournal.gui.widget;
 
+import dev.bnjc.blockgamejournal.BlockgameJournal;
 import dev.bnjc.blockgamejournal.util.GuiUtil;
 import lombok.Setter;
 import net.minecraft.client.gui.DrawContext;
@@ -12,6 +13,7 @@ import net.minecraft.util.math.MathHelper;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.function.Consumer;
+import java.util.function.Supplier;
 
 public class VerticalScrollWidget extends ClickableWidget {
   private static final Identifier BACKGROUND = GuiUtil.sprite("scroll_bar");
@@ -35,8 +37,12 @@ public class VerticalScrollWidget extends ClickableWidget {
   @Nullable
   private Consumer<Float> responder = null;
 
-  public VerticalScrollWidget(int x, int y, int height, Text message) {
+  private final Supplier<Integer> rowCount;
+
+  public VerticalScrollWidget(int x, int y, int height, Text message, Supplier<Integer> rowCount) {
     super(x, y, BAR_WIDTH, height, message);
+
+    this.rowCount = rowCount;
   }
 
   public void setDisabled(boolean disabled) {
@@ -65,7 +71,7 @@ public class VerticalScrollWidget extends ClickableWidget {
   @Override
   public boolean mouseScrolled(double mouseX, double mouseY, double horizontalAmount, double verticalAmount) {
     if (this.visible && !this.disabled) {
-      setProgress((float) (this.progress - verticalAmount));
+      setProgress((float) (this.progress - (verticalAmount / (float) this.rowCount.get())));
     }
     return super.mouseScrolled(mouseX, mouseY, horizontalAmount, verticalAmount);
   }

@@ -2,6 +2,7 @@ package dev.bnjc.blockgamejournal.journal.metadata;
 
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
+import dev.bnjc.blockgamejournal.BlockgameJournal;
 import lombok.Getter;
 import lombok.Setter;
 import org.jetbrains.annotations.Nullable;
@@ -53,11 +54,15 @@ public class Metadata {
           Codec.unboundedMap(JournalAdvancement.CODEC, Codec.BOOL)
               .xmap(HashMap::new, Function.identity())
               .optionalFieldOf("advancements")
-              .forGetter(meta -> Optional.ofNullable(meta.advancements))
+              .forGetter(meta -> Optional.ofNullable(meta.advancements)),
+          Codec.unboundedMap(Codec.STRING, Codec.INT)
+              .xmap(HashMap::new, Function.identity())
+              .optionalFieldOf("manuallyCompletedTracking")
+              .forGetter(meta -> Optional.ofNullable(meta.manuallyCompletedTracking))
       ).apply(instance, (name, lastModified, loadedTime, playerBalance, balanceLastUpdated,
                          professionLevels, professionLastUpdated,
                          backpackContents, backpackLastUpdated,
-                         knownRecipes, advancements) -> {
+                         knownRecipes, advancements, manuallyCompletedTracking) -> {
         Metadata meta = new Metadata(
             name.orElse(null),
             lastModified.map(Instant::ofEpochMilli).orElse(Instant.now()),
@@ -75,6 +80,7 @@ public class Metadata {
 
         knownRecipes.ifPresent(meta::setKnownRecipes);
         advancements.ifPresent(meta::setAdvancements);
+        manuallyCompletedTracking.ifPresent(meta::setManuallyCompletedTracking);
 
         return meta;
       })
@@ -105,6 +111,9 @@ public class Metadata {
   @Setter
   private HashMap<JournalAdvancement, Boolean> advancements;
 
+  @Setter
+  private HashMap<String, Integer> manuallyCompletedTracking;
+
   public Metadata(@Nullable String name, Instant lastModified, long loadedTime) {
     this.name = name;
     this.lastModified = lastModified;
@@ -117,6 +126,7 @@ public class Metadata {
     this.backpackLastUpdated = null;
     this.knownRecipes = new HashMap<>();
     this.advancements = new HashMap<>();
+    this.manuallyCompletedTracking = new HashMap<>();
   }
 
   public static Metadata blank() {
@@ -178,5 +188,29 @@ public class Metadata {
 
   public boolean hasAdvancement(JournalAdvancement advancement) {
     return this.advancements.getOrDefault(advancement, false);
+  }
+
+  public int getManualCount(String key) {
+    if (!BlockgameJournal.getConfig().getGeneralConfig().enableManualTracking) {
+      return 0;
+    }
+
+    return this.manuallyCompletedTracking.getOrDefault(key, 0);
+  }
+
+  public void removeManualCount(String key) {
+    if (!BlockgameJournal.getConfig().getGeneralConfig().enableManualTracking) {
+      return;
+    }
+
+    this.manuallyCompletedTracking.remove(key);
+  }
+
+  public void adjustManualCount(String key, int amount) {
+    if (!BlockgameJournal.getConfig().getGeneralConfig().enableManualTracking) {
+      return;
+    }
+
+    this.manuallyCompletedTracking.put(key, Math.max(this.getManualCount(key) + amount, 0));
   }
 }

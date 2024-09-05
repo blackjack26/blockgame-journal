@@ -1,5 +1,6 @@
 package dev.bnjc.blockgamejournal.gui.widget;
 
+import dev.bnjc.blockgamejournal.BlockgameJournal;
 import dev.bnjc.blockgamejournal.gui.screen.JournalScreen;
 import dev.bnjc.blockgamejournal.gui.screen.TrackingScreen;
 import dev.bnjc.blockgamejournal.journal.Journal;
@@ -17,37 +18,42 @@ import net.minecraft.client.gui.screen.Screen;
 import net.minecraft.client.gui.screen.narration.NarrationMessageBuilder;
 import net.minecraft.client.gui.tooltip.Tooltip;
 import net.minecraft.client.gui.widget.TexturedButtonWidget;
-import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
 import net.minecraft.item.Items;
 import net.minecraft.text.MutableText;
 import net.minecraft.text.Text;
 import net.minecraft.util.Formatting;
+import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+import org.lwjgl.glfw.GLFW;
 
 import java.util.*;
 
 public class TrackingWidget extends ScrollableViewWidget {
   private static final int MIN_WIDTH = 150;
 
-  private static Set<String> expandedIngredients = new HashSet<>();
+  private static final Set<String> expandedIngredients = new HashSet<>();
   private static boolean flattened = false;
 
   private final Screen parent;
   private final TextRenderer textRenderer;
   private final TexturedButtonWidget showHideButton;
 
-  private JournalPlayerInventory inventory;
+  private final Map<String, Integer[]> ingredientPositions;
+  private final Map<JournalEntry, Integer[]> itemPositions;
+  private final JournalPlayerInventory inventory;
+
   private TrackingList trackingList;
 
-  private Map<String, Integer[]> ingredientPositions;
-  private Map<JournalEntry, Integer[]> itemPositions;
   private int flattenY;
 
   private int lastY;
   private int xOffset = 10;
   private int mouseX = 0;
   private int mouseY = 0;
+
+  private boolean shiftDown = false;
+  private boolean ctrlDown = false;
 
   public TrackingWidget(Screen parent, int x, int y, int width, int height) {
     super(x, y, width, height, Text.empty());
@@ -163,13 +169,7 @@ public class TrackingWidget extends ScrollableViewWidget {
     }
 
     context.drawItem(item, x, y);
-
-    if (entry.getCount() > 1) {
-      context.getMatrices().push();
-      context.getMatrices().translate(0, 0, 200.0f);
-      context.drawText(textRenderer, Text.literal("" + entry.getCount()).formatted(Formatting.WHITE), x + 8, y + 8, 0x404040, true);
-      context.getMatrices().pop();
-    }
+    ItemUtil.renderItemCount(context, x, y, entry.getCount());
 
     context.drawText(textRenderer, ItemUtil.getName(item), x + 24, y + 6, 0xFFFFFF, false);
 
@@ -295,6 +295,7 @@ public class TrackingWidget extends ScrollableViewWidget {
     for (ItemStack item : ingredients) {
       int startY = this.lastY;
       String ingredientKey = (parentKey != null ? parentKey + ";" : "") + ItemUtil.getKey(item);
+      int manualCount = Journal.INSTANCE.getMetadata().getManualCount(ingredientKey);
 
       // Render item
       context.drawItem(item, x, this.lastY);
@@ -303,9 +304,14 @@ public class TrackingWidget extends ScrollableViewWidget {
       int itemCount = item.getCount() * quantity;
       int neededCount = this.inventory.neededCount(item, itemCount);
       int inventoryCount = itemCount - neededCount;
-      boolean hasEnough = neededCount <= 0;
+      boolean hasEnough = (neededCount - manualCount) <= 0;
 
-      MutableText text = Text.literal(hasEnough ? "✔ " : "✖ ").formatted(hasEnough ? Formatting.DARK_GREEN : Formatting.DARK_RED);
+      String icon = hasEnough ? "✔" : "✖";
+      if (hasEnough && manualCount > 0 && neededCount > 0) {
+        // Show this icon only if the item is completed, but not fully by inventory
+        icon = "■";
+      }
+      MutableText text = Text.literal(icon + " ").formatted(hasEnough ? Formatting.DARK_GREEN : Formatting.DARK_RED);
       MutableText itemText = Text.literal(ItemUtil.getName(item)).formatted(hasEnough ? Formatting.DARK_GRAY : Formatting.WHITE);
       if (hasEnough) {
         itemText.formatted(Formatting.STRIKETHROUGH);
@@ -316,10 +322,8 @@ public class TrackingWidget extends ScrollableViewWidget {
 
       if (itemCount > 1) {
         MutableText countText = Text.literal(" (");
-
-        countText.append(Text.literal("" + inventoryCount)
+        countText.append(Text.literal("" + (inventoryCount + manualCount))
                 .formatted(hasEnough ? Formatting.DARK_GREEN : Formatting.DARK_RED));
-
         countText.append(Text.literal("/" + itemCount + ")"));
         countText.setStyle(countText.getStyle().withColor(0x8A8A8A));
         text.append(countText);
@@ -339,7 +343,7 @@ public class TrackingWidget extends ScrollableViewWidget {
         if (entries != null && !entries.isEmpty()) {
           JournalEntry nextEntry = entries.get(0);
           int nextCount = nextEntry.getCount();
-          int reqCount = itemCount - inventoryCount; // Remove the count that is already in the inventory
+          int reqCount = itemCount - inventoryCount - manualCount; // Remove the count that is already in the inventory
           int quantityNeeded = (int) Math.ceil((double) reqCount / nextCount);
 
           this.renderCost(context, nextEntry.getCost() * quantityNeeded);
@@ -380,7 +384,7 @@ public class TrackingWidget extends ScrollableViewWidget {
             }
 
             tooltipText.add(Text.empty());
-            tooltipText.add(Text.literal("Right-click to remove from list").formatted(Formatting.ITALIC, Formatting.GRAY));
+            tooltipText.add(Text.literal("Right-click").formatted(Formatting.ITALIC, Formatting.DARK_RED).append(Text.literal(" to remove from list").formatted(Formatting.ITALIC, Formatting.GRAY)));
 
             context.getMatrices().push();
             context.getMatrices().translate(0, 0, 200.0f);
@@ -409,7 +413,47 @@ public class TrackingWidget extends ScrollableViewWidget {
               tooltipText.add(Text.literal("Vendor: ").formatted(Formatting.GRAY)
                   .append(Text.literal(journalEntry.getNpcName()).formatted(Formatting.DARK_AQUA)));
               tooltipText.add(Text.empty());
-              tooltipText.add(Text.literal("Left-click to expand/collapse").formatted(Formatting.ITALIC, Formatting.GRAY));
+              tooltipText.add(Text.literal("Left-click").formatted(Formatting.ITALIC, Formatting.GOLD).append(Text.literal(" to expand/collapse").formatted(Formatting.ITALIC, Formatting.GRAY)));
+            }
+            else {
+              tooltipText.add(Text.empty());
+            }
+
+            if (BlockgameJournal.getConfig().getGeneralConfig().enableManualTracking) {
+              Text incDecText;
+              if (shiftDown) {
+                if (ctrlDown) {
+                  incDecText = Text.literal("-8").formatted(Formatting.DARK_RED, Formatting.ITALIC);
+                } else {
+                  incDecText = Text.literal("+8").formatted(Formatting.DARK_GREEN, Formatting.ITALIC);
+                }
+              } else {
+                if (ctrlDown) {
+                  incDecText = Text.literal("-1").formatted(Formatting.DARK_RED, Formatting.ITALIC);
+                } else {
+                  incDecText = Text.literal("+1").formatted(Formatting.DARK_GREEN, Formatting.ITALIC);
+                }
+              }
+
+              tooltipText.add(
+                  Text.literal("Right-click").formatted(Formatting.ITALIC, Formatting.BLUE)
+                      .append(Text.literal(" to manually set ").formatted(Formatting.ITALIC, Formatting.GRAY))
+                      .append(incDecText)
+              );
+
+              int inventoryCount = this.inventory.count(stack);
+              if (inventoryCount > 0) {
+                tooltipText.add(Text.empty());
+                tooltipText.add(Text.literal("Inventory Count: ").formatted(Formatting.GRAY).append(Text.literal("" + inventoryCount).formatted(Formatting.GREEN, Formatting.BOLD)));
+              }
+
+              int manualCount = Journal.INSTANCE.getMetadata().getManualCount(entry.getKey());
+              if (manualCount > 0) {
+                if (inventoryCount <= 0) {
+                  tooltipText.add(Text.empty());
+                }
+                tooltipText.add(Text.literal("Manual Count: ").formatted(Formatting.GRAY).append(Text.literal("" + manualCount).formatted(Formatting.GOLD, Formatting.BOLD)));
+              }
             }
 
             context.getMatrices().push();
@@ -427,6 +471,30 @@ public class TrackingWidget extends ScrollableViewWidget {
   @Override
   protected void appendClickableNarrations(NarrationMessageBuilder builder) {
 
+  }
+
+  @Override
+  public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
+    if (keyCode == GLFW.GLFW_KEY_LEFT_SHIFT || keyCode == GLFW.GLFW_KEY_RIGHT_SHIFT) {
+      shiftDown = true;
+    }
+    else if (keyCode == GLFW.GLFW_KEY_LEFT_CONTROL || keyCode == GLFW.GLFW_KEY_RIGHT_CONTROL) {
+      ctrlDown = true;
+    }
+
+    return super.keyPressed(keyCode, scanCode, modifiers);
+  }
+
+  @Override
+  public boolean keyReleased(int keyCode, int scanCode, int modifiers) {
+    if (keyCode == GLFW.GLFW_KEY_LEFT_SHIFT || keyCode == GLFW.GLFW_KEY_RIGHT_SHIFT) {
+      shiftDown = false;
+    }
+    else if (keyCode == GLFW.GLFW_KEY_LEFT_CONTROL || keyCode == GLFW.GLFW_KEY_RIGHT_CONTROL) {
+      ctrlDown = false;
+    }
+
+    return super.keyReleased(keyCode, scanCode, modifiers);
   }
 
   @Override
@@ -471,12 +539,17 @@ public class TrackingWidget extends ScrollableViewWidget {
           return true;
         }
       } else if (button == 1) {
+        // Add/remove tracking
         for (Map.Entry<JournalEntry, Integer[]> entry : this.itemPositions.entrySet()) {
           Integer[] bounds = entry.getValue();
           if (mouseY + getScrollY() >= bounds[0] && mouseY + getScrollY() <= bounds[1]) {
             if (entry.getKey() != null) {
               this.playDownSound(MinecraftClient.getInstance().getSoundManager());
+
               entry.getKey().setTracked(false);
+
+              // Remove item positions
+              this.itemPositions.remove(entry.getKey());
 
               if (this.parent instanceof JournalScreen journalScreen) {
                 journalScreen.refreshTracking();
@@ -484,13 +557,72 @@ public class TrackingWidget extends ScrollableViewWidget {
                 trackingScreen.refreshTracking();
               }
 
+              // Remove manually completed items
+              for (String key : removedManuallyCompleteItems()) {
+                Journal.INSTANCE.getMetadata().removeManualCount(key);
+              }
+
               return true;
             }
           }
         }
+
+        // Add/remove manual completion
+        for (Map.Entry<String, Integer[]> entry : this.ingredientPositions.entrySet()) {
+          Integer[] bounds = entry.getValue();
+          if (mouseY + getScrollY() >= bounds[0] && mouseY + getScrollY() <= bounds[1]) {
+            String itemKey = entry.getKey();
+            this.playDownSound(MinecraftClient.getInstance().getSoundManager());
+
+            var metadata = Journal.INSTANCE.getMetadata();
+
+            if (shiftDown) {
+              if (ctrlDown) {
+                // Decrement by 8
+                metadata.adjustManualCount(itemKey, -8);
+              } else {
+                // Increment by 8
+                metadata.adjustManualCount(itemKey, 8);
+              }
+            } else {
+              if (ctrlDown) {
+                // Decrement by 1
+                metadata.adjustManualCount(itemKey, -1);
+              } else {
+                // Increment by 1
+                metadata.adjustManualCount(itemKey, 1);
+              }
+            }
+
+            return true;
+          }
+        }
       }
     }
-    return false;
+    return super.mouseClicked(mouseX, mouseY, button);
+  }
+
+  private @NotNull Set<String> removedManuallyCompleteItems() {
+    if (Journal.INSTANCE == null) {
+      return Collections.emptySet();
+    }
+
+    Set<String> keysToRemove = new HashSet<>();
+    for (String completedKey : Journal.INSTANCE.getMetadata().getManuallyCompletedTracking().keySet()) {
+      boolean hasKey = false;
+      for (String key : this.trackingList.getIngredients().keySet()) {
+        String[] subKeys = key.split(";");
+        if (subKeys[0].equals(completedKey.split(";")[0])) {
+          hasKey = true;
+          break;
+        }
+      }
+
+      if (!hasKey) {
+        keysToRemove.add(completedKey);
+      }
+    }
+    return keysToRemove;
   }
 
   private void toggleFlattened() {

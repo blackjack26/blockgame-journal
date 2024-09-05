@@ -39,6 +39,8 @@ public class TrackingScreen extends Screen {
     );
     this.addDrawableChild(this.trackingWidget);
     this.refreshTracking();
+
+    this.trackingWidget.setFocused(true);
   }
 
   public void refreshTracking() {

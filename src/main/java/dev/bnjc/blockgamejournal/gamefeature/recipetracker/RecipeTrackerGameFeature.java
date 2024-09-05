@@ -7,14 +7,12 @@ import dev.bnjc.blockgamejournal.BlockgameJournal;
 import dev.bnjc.blockgamejournal.client.BlockgameJournalClient;
 import dev.bnjc.blockgamejournal.gamefeature.GameFeature;
 import dev.bnjc.blockgamejournal.gamefeature.recipetracker.handlers.BackpackHandler;
-import dev.bnjc.blockgamejournal.gamefeature.recipetracker.handlers.CraftingStationHandler;
 import dev.bnjc.blockgamejournal.gamefeature.recipetracker.handlers.ProfileHandler;
-import dev.bnjc.blockgamejournal.gamefeature.recipetracker.handlers.RecipePreviewHandler;
+import dev.bnjc.blockgamejournal.gamefeature.recipetracker.handlers.vendor.VendorHandler;
 import dev.bnjc.blockgamejournal.gui.screen.JournalScreen;
 import dev.bnjc.blockgamejournal.journal.Journal;
 import dev.bnjc.blockgamejournal.journal.npc.NPCEntry;
 import dev.bnjc.blockgamejournal.listener.chat.ReceiveChatListener;
-import dev.bnjc.blockgamejournal.listener.interaction.EntityAttackedListener;
 import dev.bnjc.blockgamejournal.listener.interaction.ItemInteractListener;
 import dev.bnjc.blockgamejournal.listener.renderer.PostRenderListener;
 import dev.bnjc.blockgamejournal.storage.Storage;
@@ -72,20 +70,13 @@ public class RecipeTrackerGameFeature extends GameFeature {
   private static final Pattern BALANCE_PATTERN = Pattern.compile("Balance: ([\\d,]+(?:\\.\\d+)?)\\$");
 
   @Getter
-  private final RecipePreviewHandler recipePreviewHandler;
-
-  @Getter
-  private final CraftingStationHandler craftingStationHandler;
+  private final VendorHandler vendorHandler;
 
   @Getter
   private final ProfileHandler profileHandler;
 
   @Getter
   private final BackpackHandler backpackHandler;
-
-  @Getter
-  @Nullable
-  private Entity lastAttackedEntity = null;
 
   @Getter
   @Nullable
@@ -96,8 +87,7 @@ public class RecipeTrackerGameFeature extends GameFeature {
   private String lastRecipeName = null;
 
   public RecipeTrackerGameFeature() {
-    this.recipePreviewHandler = new RecipePreviewHandler(this);
-    this.craftingStationHandler = new CraftingStationHandler(this);
+    this.vendorHandler = new VendorHandler();
     this.profileHandler = new ProfileHandler(this);
     this.backpackHandler = new BackpackHandler(this);
   }
@@ -108,7 +98,6 @@ public class RecipeTrackerGameFeature extends GameFeature {
 
     ClientPlayConnectionEvents.JOIN.register(this::handleJoin);
     ClientPlayConnectionEvents.DISCONNECT.register(this::handleDisconnect);
-    EntityAttackedListener.EVENT.register(this::handleEntityAttacked);
     ItemInteractListener.EVENT.register(this::handleItemInteract);
     ClientCommandRegistrationCallback.EVENT.register(this::registerCommand);
     ScreenEvents.AFTER_INIT.register(this::handleScreenInit);
@@ -121,8 +110,7 @@ public class RecipeTrackerGameFeature extends GameFeature {
       }
     });
 
-    this.craftingStationHandler.init();
-    this.recipePreviewHandler.init();
+    this.vendorHandler.init();
     this.profileHandler.init();
     this.backpackHandler.init();
 
@@ -254,13 +242,6 @@ public class RecipeTrackerGameFeature extends GameFeature {
         }
       });
     }
-  }
-
-  private ActionResult handleEntityAttacked(PlayerEntity playerEntity, Entity entity) {
-    lastAttackedEntity = entity;
-    craftingStationHandler.reset();
-
-    return ActionResult.PASS;
   }
 
   private ActionResult handleChatMessage(MinecraftClient client, String message) {

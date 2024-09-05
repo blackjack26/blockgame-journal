@@ -239,12 +239,7 @@ public class RecipeWidget extends ClickableWidget {
     }
 
     // Item count (in bottom right corner of item)
-    if (this.entry.getCount() > 1) {
-      context.getMatrices().push();
-      context.getMatrices().translate(0.0f, 0.0f, 200.0f);
-      context.drawText(textRenderer, Text.literal("" + this.entry.getCount()).formatted(Formatting.WHITE), x + 8, y + 8, 0x404040, true);
-      context.getMatrices().pop();
-    }
+    ItemUtil.renderItemCount(context, x, y, this.entry.getCount());
 
     // Title
     MutableText title = Text.literal(ItemUtil.getName(item)).formatted(Formatting.BOLD, Formatting.WHITE);

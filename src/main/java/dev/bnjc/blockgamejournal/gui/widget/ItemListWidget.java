@@ -40,8 +40,12 @@ public class ItemListWidget extends ClickableWidget {
   private final Screen parent;
   private final int gridWidth;
   private final int gridHeight;
+
   private List<JournalItemStack> items = Collections.emptyList();
   private int offset = 0;
+
+  @Setter
+  private VerticalScrollWidget scroll;
 
   private @Nullable ItemStack hoveredItem = null;
 
@@ -82,6 +86,15 @@ public class ItemListWidget extends ClickableWidget {
   }
 
   @Override
+  public boolean mouseScrolled(double mouseX, double mouseY, double horizontalAmount, double verticalAmount) {
+    if (this.scroll == null) {
+      return false;
+    }
+
+    return this.scroll.mouseScrolled(mouseX, mouseY, horizontalAmount, verticalAmount);
+  }
+
+  @Override
   protected boolean isValidClickButton(int button) {
     this.lastButton = button;
     return button == 0 || button == 1;
@@ -112,7 +125,7 @@ public class ItemListWidget extends ClickableWidget {
     }
 
     BlockgameJournal.LOGGER.debug("Clicked item: {}, Slot: {}", item, index);
-    if (item == null) {
+    if (item == null || Journal.INSTANCE == null) {
       return;
     }
 
@@ -122,13 +135,57 @@ public class ItemListWidget extends ClickableWidget {
           (this.mode == JournalMode.Type.NPC_SEARCH && JournalScreen.getSelectedNpc() != null) ||
           (this.mode == JournalMode.Type.INGREDIENT_SEARCH && JournalScreen.getSelectedIngredient() != null)) {
 
-        @Nullable JournalEntry entry = Journal.INSTANCE.getFirstJournalEntry(ItemUtil.getKey(item));
+        @Nullable JournalEntry entry = null;
+
+        if (this.mode == JournalMode.Type.ITEM_SEARCH) {
+          // Just get the first entry
+          entry = Journal.INSTANCE.getFirstJournalEntry(ItemUtil.getKey(item));
+        }
+        else if (this.mode == JournalMode.Type.FAVORITES) {
+          // Get the first entry that is favorited
+          entry = Journal.INSTANCE.getEntries().getOrDefault(ItemUtil.getKey(item), new ArrayList<>())
+              .stream()
+              .filter(JournalEntry::isFavorite)
+              .findFirst()
+              .orElse(null);
+        }
+        else if (this.mode == JournalMode.Type.NPC_SEARCH) {
+          // Get the first entry that matches the selected NPC
+          entry = Journal.INSTANCE.getEntries().getOrDefault(ItemUtil.getKey(item), new ArrayList<>())
+              .stream()
+              .filter(e -> {
+                if (JournalScreen.getSelectedNpc() == null) {
+                  return true;
+                }
+
+                boolean npcMatch = e.getNpcName().equals(JournalScreen.getSelectedNpc().getNpcWorldName());
+                if (useSlotPositions()) {
+                  return e.getSlot() == index && npcMatch;
+                }
+                return npcMatch;
+              })
+              .findFirst()
+              .orElse(null);
+        }
+        else if (this.mode == JournalMode.Type.INGREDIENT_SEARCH) {
+          // Get the first entry that matches the selected ingredient
+          entry = Journal.INSTANCE.getEntries().getOrDefault(ItemUtil.getKey(item), new ArrayList<>())
+              .stream()
+              .filter(e -> {
+                if (JournalScreen.getSelectedIngredient() == null) {
+                  return true;
+                }
+
+                return e.getIngredients().containsKey(ItemUtil.getKey(JournalScreen.getSelectedIngredient()));
+              })
+              .findFirst()
+              .orElse(null);
+        }
+
         if (entry != null) {
           entry.setTracked(!entry.isTracked());
           JournalScreen js = getJournalScreen();
-          if (js != null) {
-            js.refreshTracking();
-          }
+          if (js != null) js.refreshTracking();
           return;
         }
       }
@@ -313,14 +370,15 @@ public class ItemListWidget extends ClickableWidget {
       for (JournalItemStack item : items) {
         int x = this.getX() + GRID_SLOT_SIZE * (item.getSlot() % this.gridWidth);
         int y = this.getY() + GRID_SLOT_SIZE * (item.getSlot() / this.gridWidth);
-        this.renderItem(context, item.getStack(), x, y);
+        this.renderItem(context, item.getStack(), x, y, item.getSlot());
       }
     } else {
       for (int i = 0; i < (this.gridWidth * this.gridHeight); i++) {
         int x = this.getX() + GRID_SLOT_SIZE * (i % this.gridWidth);
         int y = this.getY() + GRID_SLOT_SIZE * (i / this.gridWidth);
         if (i < items.size()) {
-          this.renderItem(context, items.get(i).getStack(), x, y);
+          JournalItemStack item = items.get(i);
+          this.renderItem(context, item.getStack(), x, y, item.getSlot());
         }
       }
     }
@@ -346,8 +404,12 @@ public class ItemListWidget extends ClickableWidget {
     context.drawText(MinecraftClient.getInstance().textRenderer, message, x, y, 0x000000, false);
   }
 
-  private void renderItem(DrawContext context, ItemStack item, int x, int y) {
-    if (this.mode == JournalMode.Type.NPC_SEARCH && Journal.INSTANCE != null) {
+  private void renderItem(DrawContext context, ItemStack item, int x, int y, int slot) {
+    if (Journal.INSTANCE == null) {
+      return;
+    }
+
+    if (this.mode == JournalMode.Type.NPC_SEARCH) {
       if (item.getItem() instanceof PlayerHeadItem || item.getItem() instanceof SpawnEggItem) {
         String npcName = item.getNbt().getString(Journal.NPC_NAME_KEY);
         Journal.INSTANCE.getKnownNpc(npcName).ifPresent(npc -> {
@@ -357,39 +419,8 @@ public class ItemListWidget extends ClickableWidget {
         });
       }
     }
-    else if (this.mode == JournalMode.Type.ITEM_SEARCH || this.mode == JournalMode.Type.FAVORITES) {
-      if (Journal.INSTANCE != null && Journal.INSTANCE.hasJournalEntry(item)) {
-        List<JournalEntry> entries = Journal.INSTANCE.getEntries().getOrDefault(ItemUtil.getKey(item), new ArrayList<>());
-        for (JournalEntry entry : entries) {
-          if (entry.isTracked()) {
-            context.fill(x + 1, y + 1, x + GRID_SLOT_SIZE - 1, y + GRID_SLOT_SIZE - 1, 0x80_00AA00);
-            break;
-          }
-        }
 
-        // Check for locked recipes
-        boolean recipeKnown = true;
-        boolean profReqMet = true;
-        for (JournalEntry entry : entries) {
-          if (!entry.isRecipeKnown()) {
-            recipeKnown = false;
-          }
-
-          if (!entry.meetsProfessionRequirements()) {
-            profReqMet = false;
-          }
-        }
-
-        if (!(recipeKnown && profReqMet) && BlockgameJournal.getConfig().getGeneralConfig().showRecipeLock) {
-          context.getMatrices().push();
-          context.getMatrices().translate(0, 0, 150);
-          context.drawGuiTexture(GuiUtil.sprite("lock_icon"), x + 10, y - 2, 150, 8, 8);
-          context.getMatrices().pop();
-        }
-      }
-    }
-
-    if (Journal.INSTANCE != null && Journal.INSTANCE.hasJournalEntry(item)) {
+    if (Journal.INSTANCE.hasJournalEntry(item)) {
       List<JournalEntry> entries = Journal.INSTANCE.getEntries()
           .getOrDefault(ItemUtil.getKey(item), new ArrayList<>())
           .stream().filter((entry) -> {
@@ -405,7 +436,12 @@ public class ItemListWidget extends ClickableWidget {
       boolean recipeKnown = false;
       boolean profReqMet = false;
       boolean unavailable = true;
+      boolean tracked = false;
       for (JournalEntry entry : entries) {
+        if (entry.isTracked() && !(useSlotPositions() && entry.getSlot() != slot)) {
+          tracked = true;
+        }
+
         Boolean erk = entry.recipeKnown();
         if (erk == null || Boolean.TRUE.equals(erk)) {
           recipeKnown = true;
@@ -423,6 +459,10 @@ public class ItemListWidget extends ClickableWidget {
         if (!entry.isUnavailable()) {
           unavailable = false;
         }
+      }
+
+      if (tracked) {
+        context.fill(x + 1, y + 1, x + GRID_SLOT_SIZE - 1, y + GRID_SLOT_SIZE - 1, 0x80_00AA00);
       }
 
       if (!(recipeKnown && profReqMet) && BlockgameJournal.getConfig().getGeneralConfig().showRecipeLock) {
@@ -448,14 +488,7 @@ public class ItemListWidget extends ClickableWidget {
         count = entries.get(0).getCount();
       }
 
-      if (count > 1) {
-        context.getMatrices().push();
-        context.getMatrices().translate(0.0f, 0.0f, 200.0f);
-
-        Text text = Text.literal("" + count).formatted(Formatting.WHITE);
-        context.drawText(MinecraftClient.getInstance().textRenderer, text, x + 19 - 2 - MinecraftClient.getInstance().textRenderer.getWidth(text), y + 6 + 3, 0xFFFFFF, true);
-        context.getMatrices().pop();
-      }
+      ItemUtil.renderItemCount(context, x, y, count);
     }
 
     context.drawItem(item, x + 1, y + 1);

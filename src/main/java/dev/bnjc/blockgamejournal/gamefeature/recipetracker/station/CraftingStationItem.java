@@ -40,12 +40,23 @@ public class CraftingStationItem {
   private final Map<String, Integer> expectedIngredients;
 
   public CraftingStationItem(ItemStack item, int slot) {
-    this.item = item;
+    this.item = item.copy();
     this.slot = slot;
     this.expectedIngredients = new HashMap<>();
   }
 
   public void addExpectedIngredient(String ingredient, int amount) {
     this.expectedIngredients.put(ingredient, amount);
+  }
+
+  public CraftingStationItem copy() {
+    CraftingStationItem copy = new CraftingStationItem(this.item, this.slot);
+    copy.setRecipeKnown(this.recipeKnown);
+    copy.setCost(this.cost);
+    copy.setRequiredClass(this.requiredClass);
+    copy.setRequiredLevel(this.requiredLevel);
+    copy.setOutdated(this.outdated);
+    this.expectedIngredients.forEach(copy::addExpectedIngredient);
+    return copy;
   }
 }

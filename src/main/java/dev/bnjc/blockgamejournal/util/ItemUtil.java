@@ -5,11 +5,14 @@ import dev.bnjc.blockgamejournal.gamefeature.recipetracker.station.CraftingStati
 import dev.bnjc.blockgamejournal.journal.Journal;
 import dev.bnjc.blockgamejournal.journal.JournalEntry;
 import net.minecraft.client.MinecraftClient;
+import net.minecraft.client.gui.DrawContext;
 import net.minecraft.item.ItemStack;
 import net.minecraft.item.Items;
 import net.minecraft.nbt.NbtCompound;
 import net.minecraft.recipe.*;
 import net.minecraft.registry.Registries;
+import net.minecraft.text.Text;
+import net.minecraft.util.Formatting;
 import net.minecraft.util.Identifier;
 import org.jetbrains.annotations.Nullable;
 
@@ -243,5 +246,18 @@ public class ItemUtil {
     }
 
     return false;
+  }
+
+  public static void renderItemCount(DrawContext context, int x, int y, int count) {
+    if (count <= 1) {
+      return;
+    }
+
+    context.getMatrices().push();
+    context.getMatrices().translate(0.0f, 0.0f, 200.0f);
+
+    Text text = Text.literal("" + count).formatted(Formatting.WHITE);
+    context.drawText(MinecraftClient.getInstance().textRenderer, text, x + 19 - 2 - MinecraftClient.getInstance().textRenderer.getWidth(text), y + 6 + 3, 0xFFFFFF, true);
+    context.getMatrices().pop();
   }
 }
