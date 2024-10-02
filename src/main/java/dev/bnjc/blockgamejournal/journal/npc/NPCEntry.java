@@ -70,16 +70,10 @@ public class NPCEntry {
     this.entityType = EntityType.getId(EntityType.PLAYER).toString();
   }
 
-  public static NPCEntry of(Entity entity) {
+  public static NPCEntry of(Entity entity, String name) {
     String world = entity.getEntityWorld().getRegistryKey().getValue().toString();
     if (entity instanceof PlayerEntity) {
-      return new NPCEntry(entity.getEntityName(), ((PlayerEntity)entity).getGameProfile(), entity.getBlockPos(), world);
-    }
-
-    // Create a new GameProfile with the entity's UUID and name
-    String name = entity.getEntityName();
-    if (entity.hasCustomName()) {
-      name = entity.getCustomName().getString();
+      return new NPCEntry(name, ((PlayerEntity)entity).getGameProfile(), entity.getBlockPos(), world);
     }
 
     GameProfile profile = new GameProfile(entity.getUuid(), name);

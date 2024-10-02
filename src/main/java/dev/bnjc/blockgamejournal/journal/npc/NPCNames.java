@@ -54,6 +54,11 @@ public final class NPCNames {
 
     NAMES.put("Myrkheim Dealer", new NPCName("Myrkheim Dealer", "Unreliable Guide"));
     NAMES.put("Sunken Dealer", new NPCName("Sunken Dealer", null));
+
+    NAMES.put("Ol' Eggman", new NPCName("Ol' Eggman", "Glute Maxer")); // Mothman March
+    NAMES.put("David S. Pumpkins", new NPCName("David S. Pumpkins", "His Own Thang")); // Halloween Bash
+    NAMES.put("Feathers", new NPCName("Feathers", "Turkey")); // Turkey Terror
+    NAMES.put("Saint Nick", new NPCName("Saint Nick", "Santa")); // Winter Wonderland
   }
 
   private NPCNames() {}

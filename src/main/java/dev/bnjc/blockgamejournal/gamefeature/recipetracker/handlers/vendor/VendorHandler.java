@@ -20,11 +20,14 @@ import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.item.ItemStack;
 import net.minecraft.item.KnowledgeBookItem;
 import net.minecraft.item.PlayerHeadItem;
+import net.minecraft.nbt.NbtCompound;
 import net.minecraft.nbt.NbtList;
 import net.minecraft.network.packet.s2c.play.InventoryS2CPacket;
 import net.minecraft.network.packet.s2c.play.OpenScreenS2CPacket;
+import net.minecraft.scoreboard.ScoreboardDisplaySlot;
 import net.minecraft.screen.slot.Slot;
 import net.minecraft.screen.slot.SlotActionType;
+import net.minecraft.text.Text;
 import net.minecraft.util.ActionResult;
 import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
@@ -101,8 +104,14 @@ public class VendorHandler {
         }
 
         // Look for screen name "Some Name (#page#/#max#)" - exclude "Party" from the name
-        Matcher matcher = Pattern.compile("^((?!Party)[\\w\\s]+)\\s\\(\\d+/\\d+\\)").matcher(screenName);
+        Matcher matcher = Pattern.compile("^((?!Party)[^(]+)\\s\\(\\d+/\\d+\\)").matcher(screenName);
         if (matcher.find() || screenName.equals(entityName)) {
+          // Citizens2 uses "CIT-<entity name>" as the entity name if no custom name is set
+          if (entityName.startsWith("CIT-")) {
+            entityName = matcher.group(1);
+            interactionEntity.setCustomName(Text.literal(entityName));
+          }
+
           this.syncId = packet.getSyncId();
           this.vendorName = entityName;
           this.stationItems.clear();

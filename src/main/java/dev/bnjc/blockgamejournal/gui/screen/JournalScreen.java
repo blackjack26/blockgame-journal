@@ -587,6 +587,11 @@ public class JournalScreen extends Screen {
         .map(entry -> {
           if (JournalScreen.vendorItemSort == ItemListWidget.VendorSort.A_TO_Z) {
             JournalItemStack stack = JournalItemStack.fromKnownItem(entry.getKey());
+
+            if (entry.getValue().stream().allMatch(JournalEntry::isLocked) && UnlockedButtonWidget.isToggled()) {
+              return List.<JournalItemStack>of();
+            }
+
             if (stack != null) {
               this.adjustLoreNbt(stack);
               return List.of(stack);

@@ -84,7 +84,7 @@ public class RecipeBuilder {
       return false;
     }
 
-    JournalEntry entry = new JournalEntryBuilder(this.ingredients, vendor, stationItem.getSlot()).build(item);
+    JournalEntry entry = new JournalEntryBuilder(this.ingredients, vendorName, stationItem.getSlot()).build(item);
     if (!this.validateEntry(stationItem, entry)) {
       BlockgameJournal.LOGGER.warn("[Blockgame Journal] Recipe validation failed");
       return false;

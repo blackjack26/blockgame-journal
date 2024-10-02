@@ -54,8 +54,13 @@ public class KnownRecipesWidget extends ScrollableViewWidget {
       return;
     }
 
+    int totalKnown = knownRecipes.values().stream().mapToInt(known -> known ? 1 : 0).sum();
+    int totalRecipes = knownRecipes.size();
+
     // Render "Known Recipes" text
-    MutableText titleText = Text.literal("Learned Recipes").formatted(Formatting.WHITE, Formatting.BOLD);
+    MutableText countText = Text.literal(" (" + totalKnown + "/" + totalRecipes + ")").formatted(Formatting.GRAY);
+    countText.setStyle(countText.getStyle().withBold(false));
+    MutableText titleText = Text.literal("Learned Recipes").formatted(Formatting.WHITE, Formatting.BOLD).append(countText);
     context.drawText(textRenderer, titleText, this.getX(), this.lastY, 0x404040, false);
 
     this.lastY += 12;

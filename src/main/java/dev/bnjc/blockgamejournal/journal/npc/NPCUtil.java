@@ -15,7 +15,7 @@ public final class NPCUtil {
       return;
     }
 
-    NPCEntry npcEntry = NPCEntry.of(entity);
+    NPCEntry npcEntry = NPCEntry.of(entity, name);
 
     // Check if there is an existing NPC entry with the same name
     NPCEntry existing = Journal.INSTANCE.getKnownNPCs().get(name);

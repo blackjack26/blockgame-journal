@@ -245,6 +245,16 @@ public class ItemUtil {
       }
     }
 
+    // Check to see if there is a new level requirement
+    if (entry.getRequiredLevel() != expected.getRequiredLevel()) {
+      return true;
+    }
+
+    // Check to see if recipe has been removed or added
+    if ((entry.recipeKnown() == null && expected.getRecipeKnown() != null) || (entry.recipeKnown() != null && expected.getRecipeKnown() == null)) {
+      return true;
+    }
+
     return false;
   }
 
