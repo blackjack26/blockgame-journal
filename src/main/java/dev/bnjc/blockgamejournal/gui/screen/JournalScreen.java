@@ -84,6 +84,7 @@ public class JournalScreen extends Screen {
 
   private final JournalPlayerInventory inventory;
 
+  @Getter
   private TextFieldWidget search;
   private ItemListWidget itemList;
   private VerticalScrollWidget scroll;

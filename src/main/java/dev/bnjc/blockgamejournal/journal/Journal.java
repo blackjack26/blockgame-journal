@@ -3,8 +3,6 @@ package dev.bnjc.blockgamejournal.journal;
 import com.mojang.authlib.GameProfile;
 import com.mojang.serialization.Codec;
 import dev.bnjc.blockgamejournal.BlockgameJournal;
-import dev.bnjc.blockgamejournal.gui.toast.EasterEggToast;
-import dev.bnjc.blockgamejournal.journal.metadata.JournalAdvancement;
 import dev.bnjc.blockgamejournal.journal.metadata.Metadata;
 import dev.bnjc.blockgamejournal.journal.npc.NPCEntry;
 import dev.bnjc.blockgamejournal.journal.npc.NPCItemStack;
@@ -13,7 +11,6 @@ import dev.bnjc.blockgamejournal.storage.backend.FileBasedBackend;
 import dev.bnjc.blockgamejournal.util.ItemUtil;
 import lombok.Getter;
 import lombok.Setter;
-import net.minecraft.client.MinecraftClient;
 import net.minecraft.item.ItemStack;
 import net.minecraft.nbt.NbtCompound;
 import net.minecraft.nbt.NbtHelper;
@@ -51,6 +48,13 @@ public class Journal {
 
   @Nullable
   public static Journal INSTANCE = null;
+
+  public static Journal instance() {
+    if (INSTANCE == null) {
+      loadDefault();
+    }
+    return INSTANCE;
+  }
 
   public static void loadDefault() {
     loadOrCreate(Metadata.blankWithName(FileBasedBackend.JOURNAL_NAME));

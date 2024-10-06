@@ -1,6 +1,7 @@
 package dev.bnjc.blockgamejournal.mixin.network;
 
 import com.mojang.authlib.GameProfile;
+import dev.bnjc.blockgamejournal.BlockgameJournal;
 import net.minecraft.client.network.PlayerListEntry;
 import net.minecraft.client.util.SkinTextures;
 import net.minecraft.util.Identifier;
@@ -17,7 +18,7 @@ import java.util.function.Supplier;
 @Mixin(PlayerListEntry.class)
 public abstract class PlayerListEntryMixin {
   @Unique
-  private static final Identifier DEV_CAPE = new Identifier("blockgamejournal", "textures/cape/devcape.png");
+  private static final Identifier DEV_CAPE = new Identifier("blockgamejournal", "textures/cape/bnjc_cape.png");
 
   @Shadow public abstract GameProfile getProfile();
 
@@ -25,19 +26,23 @@ public abstract class PlayerListEntryMixin {
 
   @Inject(method = "getSkinTextures", at = @At("RETURN"), cancellable = true)
   public void getSkinTextures(CallbackInfoReturnable<SkinTextures> cir) {
-    Identifier capeTexture = null;
+    try {
+      Identifier capeTexture = null;
 
-    // Set cape texture
-    String username = this.getProfile().getName();
+      // Set cape texture
+      String username = this.getProfile().getName();
 
-    switch (username) {
-      case "bnjc" -> capeTexture = DEV_CAPE;
-    }
+      switch (username) {
+        case "bnjc" -> capeTexture = DEV_CAPE;
+      }
 
-    // Modify outcome if we found a custom cape
-    if (capeTexture != null) {
-      SkinTextures textures = texturesSupplier.get();
-      cir.setReturnValue(new SkinTextures(textures.texture(), textures.textureUrl(), capeTexture, capeTexture, textures.model(), textures.secure()));
+      // Modify outcome if we found a custom cape
+      if (capeTexture != null) {
+        SkinTextures textures = texturesSupplier.get();
+        cir.setReturnValue(new SkinTextures(textures.texture(), textures.textureUrl(), capeTexture, capeTexture, textures.model(), textures.secure()));
+      }
+    } catch (Exception e) {
+      // Fail silently
     }
   }
 }

@@ -22,11 +22,11 @@ public class DecomposedJournalEntry {
   private final String key;
   private final int count;
   private float cost;
-  private Map<String, Integer> ingredients;
-  private Map<String, Integer> leftovers;
-  private Set<String> npcNames;
-  private Map<String, Integer> professions;
-  private Map<String, Boolean> knownRecipes;
+  private final Map<String, Integer> ingredients;
+  private final Map<String, Integer> leftovers;
+  private final Set<String> npcNames;
+  private final Map<String, Integer> professions;
+  private final Map<String, Boolean> knownRecipes;
 
   private ItemStack knownItem;
 

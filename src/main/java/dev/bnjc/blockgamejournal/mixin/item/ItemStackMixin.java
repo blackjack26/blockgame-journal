@@ -1,5 +1,6 @@
 package dev.bnjc.blockgamejournal.mixin.item;
 
+import dev.bnjc.blockgamejournal.BlockgameJournal;
 import dev.bnjc.blockgamejournal.journal.Journal;
 import net.minecraft.client.item.TooltipContext;
 import net.minecraft.entity.player.PlayerEntity;
@@ -23,27 +24,31 @@ public abstract class ItemStackMixin {
 
   @Inject(method = "getTooltip", at = @At("TAIL"))
   private void getTooltip(@Nullable PlayerEntity player, TooltipContext context, CallbackInfoReturnable<List<Text>> ci) {
-    if (Journal.INSTANCE == null) {
-      return;
-    }
-
-    NbtCompound nbt = this.getNbt();
-    if (nbt != null && nbt.contains("MMOITEMS_ITEM_TYPE") && nbt.getString("MMOITEMS_ITEM_TYPE").equals("RECIPE")) {
-      String permission = nbt.getString("MMOITEMS_PERMISSION");
-      String lastRecipeName = permission.substring(permission.lastIndexOf(".") + 1);
-
-      Boolean knownRecipe = Journal.INSTANCE.getMetadata().getKnownRecipe("mmoitems:" + lastRecipeName);
-      if (knownRecipe != null) {
-        ci.getReturnValue().add(2, Text.empty());
-
-        MutableText indicatorText = Text.literal(knownRecipe ? "✔ " : "✖ ").formatted(knownRecipe ? Formatting.GREEN : Formatting.RED);
-        if (knownRecipe) {
-          indicatorText.append(Text.literal("You know this recipe!").formatted(Formatting.GREEN));
-        } else {
-          indicatorText.append(Text.literal("You don't know this recipe!").formatted(Formatting.RED));
-        }
-        ci.getReturnValue().add(3, indicatorText);
+    try {
+      if (Journal.INSTANCE == null) {
+        return;
       }
+
+      NbtCompound nbt = this.getNbt();
+      if (nbt != null && nbt.contains("MMOITEMS_ITEM_TYPE") && nbt.getString("MMOITEMS_ITEM_TYPE").equals("RECIPE")) {
+        String permission = nbt.getString("MMOITEMS_PERMISSION");
+        String lastRecipeName = permission.substring(permission.lastIndexOf(".") + 1);
+
+        Boolean knownRecipe = Journal.INSTANCE.getMetadata().getKnownRecipe("mmoitems:" + lastRecipeName);
+        if (knownRecipe != null) {
+          ci.getReturnValue().add(2, Text.empty());
+
+          MutableText indicatorText = Text.literal(knownRecipe ? "✔ " : "✖ ").formatted(knownRecipe ? Formatting.GREEN : Formatting.RED);
+          if (knownRecipe) {
+            indicatorText.append(Text.literal("You know this recipe!").formatted(Formatting.GREEN));
+          } else {
+            indicatorText.append(Text.literal("You don't know this recipe!").formatted(Formatting.RED));
+          }
+          ci.getReturnValue().add(3, indicatorText);
+        }
+      }
+    } catch (Exception e) {
+      BlockgameJournal.LOGGER.error("[Blockgame Journal] Failed to add tooltip", e);
     }
   }
 }

@@ -23,24 +23,31 @@ public class WorldRendererMixin {
   private void postRender(MatrixStack matrices, float tickDelta, long limitTime, boolean renderBlockOutline,
                           Camera camera, GameRenderer gameRenderer, LightmapTextureManager lightmapTextureManager,
                           Matrix4f projectionMatrix, CallbackInfo ci) {
+    try {
+      if (MinecraftClient.isFabulousGraphicsOrBetter()) {
+        Framebuffer framebuffer = MinecraftClient.getInstance().getFramebuffer();
+        GlStateManager._glBindFramebuffer(GlConst.GL_READ_FRAMEBUFFER, this.translucentFramebuffer.fbo);
+        GlStateManager._glBindFramebuffer(GlConst.GL_DRAW_FRAMEBUFFER, framebuffer.fbo);
+        GlStateManager._glBlitFrameBuffer(0, 0, framebuffer.textureWidth, framebuffer.textureHeight, 0, 0, framebuffer.textureWidth, framebuffer.textureHeight, GlConst.GL_DEPTH_BUFFER_BIT, GlConst.GL_NEAREST);
+      }
 
-    if (MinecraftClient.isFabulousGraphicsOrBetter()) {
-      Framebuffer framebuffer = MinecraftClient.getInstance().getFramebuffer();
-      GlStateManager._glBindFramebuffer(GlConst.GL_READ_FRAMEBUFFER, this.translucentFramebuffer.fbo);
-      GlStateManager._glBindFramebuffer(GlConst.GL_DRAW_FRAMEBUFFER, framebuffer.fbo);
-      GlStateManager._glBlitFrameBuffer(0, 0, framebuffer.textureWidth, framebuffer.textureHeight, 0, 0, framebuffer.textureWidth, framebuffer.textureHeight, GlConst.GL_DEPTH_BUFFER_BIT, GlConst.GL_NEAREST);
+      boolean drawSignForeground = !MinecraftClient.isFabulousGraphicsOrBetter();
+      PostRenderListener.EVENT.invoker().postRender(tickDelta, limitTime, matrices, drawSignForeground, true);
+    } catch (Exception e) {
+      // Fail silently
     }
-
-    boolean drawSignForeground = !MinecraftClient.isFabulousGraphicsOrBetter();
-    PostRenderListener.EVENT.invoker().postRender(tickDelta, limitTime, matrices, drawSignForeground, true);
   }
 
   @Inject(method = "renderLayer", at = @At("RETURN"))
   private void renderLayer(RenderLayer renderLayer, MatrixStack matrices, double cameraX, double cameraY, double cameraZ, Matrix4f positionMatrix, CallbackInfo info) {
-    if (MinecraftClient.isFabulousGraphicsOrBetter() && MinecraftClient.getInstance().worldRenderer.getTranslucentFramebuffer() != null) {
-      MinecraftClient.getInstance().worldRenderer.getTranslucentFramebuffer().beginWrite(false);
-      PostRenderListener.EVENT.invoker().postRender(MinecraftClient.getInstance().getTickDelta(), 0L, matrices, true, false);
-      MinecraftClient.getInstance().getFramebuffer().beginWrite(false);
+    try {
+      if (MinecraftClient.isFabulousGraphicsOrBetter() && MinecraftClient.getInstance().worldRenderer.getTranslucentFramebuffer() != null) {
+        MinecraftClient.getInstance().worldRenderer.getTranslucentFramebuffer().beginWrite(false);
+        PostRenderListener.EVENT.invoker().postRender(MinecraftClient.getInstance().getTickDelta(), 0L, matrices, true, false);
+        MinecraftClient.getInstance().getFramebuffer().beginWrite(false);
+      }
+    } catch (Exception e) {
+      // Fail silently
     }
   }
 }

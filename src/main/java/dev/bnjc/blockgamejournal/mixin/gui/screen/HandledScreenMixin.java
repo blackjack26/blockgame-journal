@@ -1,5 +1,6 @@
 package dev.bnjc.blockgamejournal.mixin.gui.screen;
 
+import dev.bnjc.blockgamejournal.BlockgameJournal;
 import dev.bnjc.blockgamejournal.listener.screen.DrawSlotListener;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.screen.Screen;
@@ -18,6 +19,10 @@ public abstract class HandledScreenMixin extends Screen {
 
   @Inject(method = "drawSlot", at = @At("TAIL"))
   private void drawSlot(DrawContext context, Slot slot, CallbackInfo info) {
-    DrawSlotListener.EVENT.invoker().drawSlot(context, slot);
+    try {
+      DrawSlotListener.EVENT.invoker().drawSlot(context, slot);
+    } catch (Exception e) {
+      BlockgameJournal.LOGGER.error("[Blockgame Journal] Failed to invoke DrawSlotListener", e);
+    }
   }
 }

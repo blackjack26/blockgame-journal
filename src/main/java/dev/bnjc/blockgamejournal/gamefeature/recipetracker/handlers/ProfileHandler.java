@@ -114,6 +114,6 @@ public class ProfileHandler {
       return;
     }
 
-    Journal.INSTANCE.getMetadata().setProfessionLevel(name, level);
+    Journal.instance().getMetadata().setProfessionLevel(name, level);
   }
 }

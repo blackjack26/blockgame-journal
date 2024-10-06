@@ -1,5 +1,6 @@
 package dev.bnjc.blockgamejournal.mixin.network;
 
+import dev.bnjc.blockgamejournal.BlockgameJournal;
 import dev.bnjc.blockgamejournal.listener.chat.ReceiveChatListener;
 import dev.bnjc.blockgamejournal.listener.screen.ScreenOpenedListener;
 import dev.bnjc.blockgamejournal.listener.screen.ScreenReceivedInventoryListener;
@@ -23,35 +24,47 @@ public class ClientPlayNetworkHandlerMixin {
 
   @Inject(method = "onOpenScreen", at = @At("HEAD"), cancellable = true)
   public void onOpenScreen(OpenScreenS2CPacket packet, CallbackInfo info) {
-    ClientPlayNetworkHandler thisHandler = (ClientPlayNetworkHandler) (Object) this;
-    NetworkThreadUtils.forceMainThread(packet, thisHandler, MinecraftClient.getInstance());
+    try {
+      ClientPlayNetworkHandler thisHandler = (ClientPlayNetworkHandler) (Object) this;
+      NetworkThreadUtils.forceMainThread(packet, thisHandler, MinecraftClient.getInstance());
 
-    ActionResult result = ScreenOpenedListener.EVENT.invoker().screenOpened(packet);
-    if (result != ActionResult.PASS) {
-      // Send a packet to the server saying we have closed the window, although we never opened it
-      CloseHandledScreenC2SPacket pak = new CloseHandledScreenC2SPacket(packet.getSyncId());
-      thisHandler.sendPacket(pak);
+      ActionResult result = ScreenOpenedListener.EVENT.invoker().screenOpened(packet);
+      if (result != ActionResult.PASS) {
+        // Send a packet to the server saying we have closed the window, although we never opened it
+        CloseHandledScreenC2SPacket pak = new CloseHandledScreenC2SPacket(packet.getSyncId());
+        thisHandler.sendPacket(pak);
 
-      info.cancel();
+        info.cancel();
+      }
+    } catch (Exception e) {
+      BlockgameJournal.LOGGER.error("[BlockgameJournal] Failed to invoke ClientPlayNetworkHandlerMixin#onOpenScreen: {}", e.getMessage());
     }
   }
 
   @Inject(method = "onInventory", at = @At("HEAD"), cancellable = true)
   public void onInventory(InventoryS2CPacket packet, CallbackInfo info) {
-    ClientPlayNetworkHandler thisHandler = (ClientPlayNetworkHandler) (Object) this;
-    NetworkThreadUtils.forceMainThread(packet, thisHandler, MinecraftClient.getInstance());
+    try {
+      ClientPlayNetworkHandler thisHandler = (ClientPlayNetworkHandler) (Object) this;
+      NetworkThreadUtils.forceMainThread(packet, thisHandler, MinecraftClient.getInstance());
 
-    ActionResult result = ScreenReceivedInventoryListener.EVENT.invoker().screenReceivedInventory(packet);
-    if (result != ActionResult.PASS) {
-      info.cancel();
+      ActionResult result = ScreenReceivedInventoryListener.EVENT.invoker().screenReceivedInventory(packet);
+      if (result != ActionResult.PASS) {
+        info.cancel();
+      }
+    } catch (Exception e) {
+      BlockgameJournal.LOGGER.error("[BlockgameJournal] Failed to invoke ClientPlayNetworkHandlerMixin#onInventory: {}", e.getMessage());
     }
   }
 
   @Inject(method = "onGameMessage", at = @At("HEAD"), cancellable = true)
   public void onGameMessage(GameMessageS2CPacket packet, CallbackInfo info) {
-    ActionResult result = ReceiveChatListener.EVENT.invoker().receiveChatMessage(MinecraftClient.getInstance(), packet.content().getString());
-    if (result != ActionResult.PASS) {
-      info.cancel();
+    try {
+      ActionResult result = ReceiveChatListener.EVENT.invoker().receiveChatMessage(MinecraftClient.getInstance(), packet.content().getString());
+      if (result != ActionResult.PASS) {
+        info.cancel();
+      }
+    } catch (Exception e) {
+      BlockgameJournal.LOGGER.error("[BlockgameJournal] Failed to invoke ClientPlayNetworkHandlerMixin#onGameMessage: {}", e.getMessage());
     }
   }
 

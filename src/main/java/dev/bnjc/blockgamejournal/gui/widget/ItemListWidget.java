@@ -277,6 +277,12 @@ public class ItemListWidget extends ClickableWidget {
       return false;
     }
 
+    // Don't handle key presses if the search bar is focused
+    var js = this.getJournalScreen();
+    if (js != null && js.getSearch().isFocused()) {
+      return false;
+    }
+
     if (this.mode == JournalMode.Type.NPC_SEARCH &&
         (this.hoveredItem.getItem() instanceof PlayerHeadItem || this.hoveredItem.getItem() instanceof SpawnEggItem)) {
       String npcName = this.hoveredItem.getNbt().getString(Journal.NPC_NAME_KEY);

@@ -57,7 +57,7 @@ public class BackpackHandler {
   }
 
   private ActionResult handleSlotUpdate(ScreenHandlerSlotUpdateS2CPacket packet) {
-    if (packet.getSyncId() != syncId || lastClickedSlot == -1) {
+    if (syncId == -1 || packet.getSyncId() != syncId || lastClickedSlot == -1) {
       return ActionResult.PASS;
     }
 
@@ -120,6 +120,7 @@ public class BackpackHandler {
       int count = itemStack.getCount();
       backpackContents.compute(itemKey, (k, v) -> (v == null) ? count : v + count);
     }
-    Journal.INSTANCE.getMetadata().setBackpack(backpackContents);
+
+    Journal.instance().getMetadata().setBackpack(backpackContents);
   }
 }
