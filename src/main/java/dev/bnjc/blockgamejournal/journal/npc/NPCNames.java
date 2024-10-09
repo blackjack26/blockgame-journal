@@ -9,7 +9,7 @@ public final class NPCNames {
   private static final Map<String, NPCName> NAMES;
   static {
     NAMES = new HashMap<>();
-    NAMES.put("Alchemist", new NPCName("Nina", "Alchemist"));
+    NAMES.put("Transmuter", new NPCName("Nina", "Transmuter"));
     NAMES.put("Indy", new NPCName("Indy", "Archaeologist"));
     NAMES.put("Mortimer", new NPCName("Mortimer", "Archaeologist"));
     NAMES.put("Eitri", new NPCName("Eitri", "Artificer"));
@@ -29,7 +29,7 @@ public final class NPCNames {
     NAMES.put("Guardian", new NPCName("Armand", "Guardian"));
     NAMES.put("Amun", new NPCName("Amun", null));
     NAMES.put("Heptet", new NPCName("Heptet", null));
-    NAMES.put("Hunter", new NPCName("Hanzo", "Hunter"));
+    NAMES.put("Hanzo the Hunter", new NPCName("Hanzo", "Hunter"));
     NAMES.put("Leatherworker", new NPCName("Seymour", "Leatherworker"));
     NAMES.put("Larry", new NPCName("Larry", "Lumberjack"));
     NAMES.put("Paul", new NPCName("Paul", "Lumberjack"));

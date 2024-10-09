@@ -8,10 +8,12 @@ import dev.bnjc.blockgamejournal.journal.metadata.JournalAdvancement;
 import dev.bnjc.blockgamejournal.listener.interaction.EntityAttackedListener;
 import dev.bnjc.blockgamejournal.listener.interaction.SlotClickedListener;
 import dev.bnjc.blockgamejournal.listener.screen.DrawSlotListener;
+import dev.bnjc.blockgamejournal.listener.screen.ScreenClosedListener;
 import dev.bnjc.blockgamejournal.listener.screen.ScreenOpenedListener;
 import dev.bnjc.blockgamejournal.listener.screen.ScreenReceivedInventoryListener;
 import dev.bnjc.blockgamejournal.util.ItemUtil;
 import dev.bnjc.blockgamejournal.util.NbtUtil;
+import lombok.Getter;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.network.ClientPlayerEntity;
@@ -20,11 +22,10 @@ import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.item.ItemStack;
 import net.minecraft.item.KnowledgeBookItem;
 import net.minecraft.item.PlayerHeadItem;
-import net.minecraft.nbt.NbtCompound;
 import net.minecraft.nbt.NbtList;
+import net.minecraft.network.packet.c2s.play.CloseHandledScreenC2SPacket;
 import net.minecraft.network.packet.s2c.play.InventoryS2CPacket;
 import net.minecraft.network.packet.s2c.play.OpenScreenS2CPacket;
-import net.minecraft.scoreboard.ScoreboardDisplaySlot;
 import net.minecraft.screen.slot.Slot;
 import net.minecraft.screen.slot.SlotActionType;
 import net.minecraft.text.Text;
@@ -42,8 +43,14 @@ public class VendorHandler {
   /** Used to track the last preview times for the Carpal Tunnel advancement */
   private static final Queue<Long> lastPreviewTimes = new ArrayDeque<>();
 
+  @Getter
+  private static final Map<String, @Nullable List<Text>> outdatedItemInfo = new HashMap<>();
+
+  private static final List<String> IGNORED_NAMES = List.of("Auctioneer");
+
   private final List<@Nullable CraftingStationItem> stationItems;
   private RecipeBuilder recipeBuilder;
+
 
   private VendorState state = VendorState.INIT;
   private int syncId = -1;
@@ -74,6 +81,7 @@ public class VendorHandler {
   public void init() {
     EntityAttackedListener.EVENT.register(this::handleEntityAttacked);
     ScreenOpenedListener.EVENT.register(this::handleOpenScreen);
+    ScreenClosedListener.EVENT.register(this::handleCloseScreen);
     ScreenReceivedInventoryListener.EVENT.register(this::handleScreenInventory);
     SlotClickedListener.EVENT.register(this::handleSlotClicked);
     DrawSlotListener.EVENT.register(this::drawSlot);
@@ -104,7 +112,7 @@ public class VendorHandler {
         }
 
         // Look for screen name "Some Name (#page#/#max#)" - exclude "Party" from the name
-        Matcher matcher = Pattern.compile("^((?!Party)[^(]+)\\s\\(\\d+/\\d+\\)").matcher(screenName);
+        Matcher matcher = Pattern.compile("^((?!Party|ᴀᴜᴄᴛɪᴏɴ)[^(]+)\\s\\(\\d+/\\d+\\)").matcher(screenName);
         if (matcher.find() || screenName.equals(entityName)) {
           // Citizens2 uses "CIT-<entity name>" as the entity name if no custom name is set
           if (entityName.startsWith("CIT-")) {
@@ -112,16 +120,17 @@ public class VendorHandler {
             interactionEntity.setCustomName(Text.literal(entityName));
           }
 
-          this.syncId = packet.getSyncId();
-          this.vendorName = entityName;
-          this.stationItems.clear();
-          this.statusCache.clear();
-          this.state = VendorState.CRAFTING_STATION;
-          this.lastClickedItem = null;
+          if (!IGNORED_NAMES.contains(entityName)) {
+            this.syncId = packet.getSyncId();
+            this.vendorName = entityName;
+            this.stationItems.clear();
+            this.statusCache.clear();
+            outdatedItemInfo.clear();
+            this.state = VendorState.CRAFTING_STATION;
+            this.lastClickedItem = null;
 
-          LOGGER.info("[Blockgame Journal] Opened crafting station for {}", this.vendorName);
-
-          return ActionResult.PASS;
+            return ActionResult.PASS;
+          }
         }
       }
     }
@@ -145,6 +154,18 @@ public class VendorHandler {
 
     // Not a valid screen, reset the state
     this.reset();
+    return ActionResult.PASS;
+  }
+
+  private ActionResult handleCloseScreen(CloseHandledScreenC2SPacket packet) {
+    if (this.syncId == -1) {
+      return ActionResult.PASS;
+    }
+
+    if (packet.getSyncId() == this.syncId) {
+      this.reset();
+    }
+
     return ActionResult.PASS;
   }
 
@@ -296,8 +317,11 @@ public class VendorHandler {
 
         // If the item is in the journal, don't highlight it unless it's outdated
         if (this.vendorName.equals(expectedNpcName) && slot.id == expectedSlot) {
-          stationItem.setOutdated(ItemUtil.isOutdated(entry, stationItem));
-          if (highlightOutdated && stationItem.getOutdated()) {
+          stationItem.setOutdated(ItemUtil.checkOutdated(entry, stationItem));
+
+          outdatedItemInfo.put(entry.getKey(), stationItem.getOutdated());
+
+          if (highlightOutdated && stationItem.getOutdated() != null) {
             VendorUtil.highlightSlot(context, slot, 0x40CCCC00);
             this.statusCache.compute(slot.id, (k, v) -> v == null ? STATUS_OUTDATED : (byte) (v | STATUS_OUTDATED));
           } else {
@@ -349,6 +373,7 @@ public class VendorHandler {
     this.vendorName = "";
     this.stationItems.clear();
     this.statusCache.clear();
+    outdatedItemInfo.clear();
 
     // Recipe preview
     this.recipeBuilder = RecipeBuilder.create();

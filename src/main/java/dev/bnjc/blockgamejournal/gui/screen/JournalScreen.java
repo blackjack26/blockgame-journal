@@ -161,7 +161,7 @@ public class JournalScreen extends Screen {
         titleText,
         this.left + TITLE_LEFT,
         this.top + TITLE_TOP,
-        MENU_WIDTH - (TITLE_LEFT * 2) - (2 * (BUTTON_SIZE - 2)),
+        MENU_WIDTH - (TITLE_LEFT * 2) - (3 * (BUTTON_SIZE + BUTTON_SPACING)),
         0x404040
     );
   }

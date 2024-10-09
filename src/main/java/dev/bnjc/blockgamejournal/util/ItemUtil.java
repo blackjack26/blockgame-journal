@@ -9,6 +9,8 @@ import net.minecraft.client.gui.DrawContext;
 import net.minecraft.item.ItemStack;
 import net.minecraft.item.Items;
 import net.minecraft.nbt.NbtCompound;
+import net.minecraft.nbt.NbtList;
+import net.minecraft.nbt.NbtString;
 import net.minecraft.recipe.*;
 import net.minecraft.registry.Registries;
 import net.minecraft.text.Text;
@@ -16,9 +18,7 @@ import net.minecraft.util.Formatting;
 import net.minecraft.util.Identifier;
 import org.jetbrains.annotations.Nullable;
 
-import java.util.Map;
-import java.util.Optional;
-import java.util.Set;
+import java.util.*;
 
 public class ItemUtil {
   /**
@@ -205,57 +205,140 @@ public class ItemUtil {
     return false;
   }
 
-  public static boolean isOutdated(JournalEntry entry, CraftingStationItem expected) {
-    if (expected.getOutdated() != null) {
-      return expected.getOutdated();
+  public static @Nullable List<Text> checkOutdated(JournalEntry currentEntry, CraftingStationItem newStationItem) {
+    if (newStationItem.getOutdated() != null) {
+      return newStationItem.getOutdated();
     }
 
-    // Item revision ID is different
-    Optional<Integer> slotRevId = ItemUtil.getRevisionId(expected.getItem());
-    if (slotRevId.isPresent() && slotRevId.get() != entry.getRevisionId()) {
-      return true;
-    }
+    List<Text> outdatedReasons = new ArrayList<>();
 
-    // Different amount of ingredients
-    if (entry.getIngredients().size() != expected.getExpectedIngredients().size()) {
-      return true;
+    // Check if cost changed
+    if (newStationItem.getCost() != currentEntry.getCost()) {
+      outdatedReasons.add(
+          Text.literal("[△] ")
+              .formatted(Formatting.AQUA)
+              .append(Text.literal(currentEntry.getCost() + " coin → " + newStationItem.getCost() + " coin")
+                  .formatted(Formatting.GRAY))
+      );
     }
 
     // TODO: Same amount of ingredients, but different ingredients
-    for (String key : entry.getIngredients().keySet()) {
+    List<String> currentIngredientNames = new ArrayList<>();
+    for (String key : currentEntry.getIngredients().keySet()) {
       ItemStack stack = Journal.INSTANCE.getKnownItem(key);
       if (stack == null) {
-        BlockgameJournal.LOGGER.warn("[Blockgame Journal] Ingredient not known: {} - {}", key, expected.getItem());
-        break;
+        BlockgameJournal.LOGGER.warn("[Blockgame Journal] Ingredient not known: {} - {}", key, newStationItem.getItem());
+        continue;
       }
 
       // The ingredient is not in the entry
       String itemName = ItemUtil.getName(stack, true);
-      if (!expected.getExpectedIngredients().containsKey(itemName)) {
-        BlockgameJournal.LOGGER.warn("[Blockgame Journal] Ingredient not expected: {} - {}", itemName, expected.getItem());
-        return true;
+      currentIngredientNames.add(itemName);
+      if (!newStationItem.getExpectedIngredients().containsKey(itemName)) {
+        outdatedReasons.add(
+            Text.literal("[-] ")
+                .formatted(Formatting.RED)
+                .append(Text.literal(currentEntry.getIngredients().get(key) + " " + itemName)
+                    .formatted(Formatting.GRAY))
+        );
+        continue;
       }
 
       // The ingredient amount is different
-      int expectedAmount = expected.getExpectedIngredients().get(itemName);
-      int actualAmount = entry.getIngredients().get(key);
-      if (expectedAmount != actualAmount) {
-        BlockgameJournal.LOGGER.warn("[Blockgame Journal] Ingredient amount mismatch: {} (expected: {}, actual: {}) - {}", key, expectedAmount, actualAmount, expected.getItem());
-        return true;
+      int expectedAmount = newStationItem.getExpectedIngredients().get(itemName);
+      int currentAmount = currentEntry.getIngredients().get(key);
+      if (expectedAmount != currentAmount) {
+        outdatedReasons.add(
+            Text.literal("[△] ")
+                .formatted(Formatting.AQUA)
+                .append(Text.literal(currentAmount + " " + itemName + " → " + expectedAmount + " " + itemName)
+                    .formatted(Formatting.GRAY))
+        );
       }
     }
 
+    for (var entry : newStationItem.getExpectedIngredients().entrySet()) {
+      if (!currentIngredientNames.contains(entry.getKey())) {
+        outdatedReasons.add(
+            Text.literal("[+] ")
+                .formatted(Formatting.GREEN)
+                .append(Text.literal(entry.getValue() + " " + entry.getKey())
+                    .formatted(Formatting.GRAY))
+        );
+      }
+    }
+
+    // Check to see if there is a new class requirement
+    if (!Objects.equals(currentEntry.getRequiredClass(), newStationItem.getRequiredClass())) {
+      if (newStationItem.getRequiredClass().isEmpty()) {
+        outdatedReasons.add(
+            Text.literal("[-] ")
+                .formatted(Formatting.RED)
+                .append(Text.literal(currentEntry.getRequiredLevel() + " in " + currentEntry.getRequiredClass())
+                    .formatted(Formatting.GRAY))
+        );
+      } else if (currentEntry.getRequiredClass().isEmpty()) {
+        outdatedReasons.add(
+            Text.literal("[+] ")
+                .formatted(Formatting.GREEN)
+                .append(Text.literal(newStationItem.getRequiredLevel() + " in " + newStationItem.getRequiredClass())
+                    .formatted(Formatting.GRAY))
+        );
+      } else {
+        outdatedReasons.add(
+            Text.literal("[△] ")
+                .formatted(Formatting.AQUA)
+                .append(Text.literal(currentEntry.getRequiredLevel() + " in " + currentEntry.getRequiredClass() + " → " + newStationItem.getRequiredLevel() + " in " + newStationItem.getRequiredClass())
+                    .formatted(Formatting.GRAY))
+        );
+      }
+    }
     // Check to see if there is a new level requirement
-    if (entry.getRequiredLevel() != expected.getRequiredLevel()) {
-      return true;
+    else if (currentEntry.getRequiredLevel() != newStationItem.getRequiredLevel()) {
+      outdatedReasons.add(
+          Text.literal("[△] ")
+              .formatted(Formatting.AQUA)
+              .append(Text.literal(currentEntry.getRequiredLevel() + " in " + currentEntry.getRequiredClass() + " → " + newStationItem.getRequiredLevel() + " in " + newStationItem.getRequiredClass())
+                  .formatted(Formatting.GRAY))
+      );
     }
 
-    // Check to see if recipe has been removed or added
-    if ((entry.recipeKnown() == null && expected.getRecipeKnown() != null) || (entry.recipeKnown() != null && expected.getRecipeKnown() == null)) {
-      return true;
+    // Check to see if recipe has been added
+    if (currentEntry.recipeKnown() == null && newStationItem.getRecipeKnown() != null) {
+      outdatedReasons.add(
+          Text.literal("[+] ")
+              .formatted(Formatting.GREEN)
+              .append(Text.literal("Recipe requirement")
+                  .formatted(Formatting.GRAY))
+      );
     }
 
-    return false;
+    // Check to see if recipe has been removed
+    if (currentEntry.recipeKnown() != null && newStationItem.getRecipeKnown() == null) {
+      outdatedReasons.add(
+          Text.literal("[-] ")
+              .formatted(Formatting.RED)
+              .append(Text.literal("Recipe requirement")
+                  .formatted(Formatting.GRAY))
+      );
+    }
+
+    // Item revision ID is different
+    Optional<Integer> slotRevId = ItemUtil.getRevisionId(newStationItem.getItem());
+    if (slotRevId.isPresent() && slotRevId.get() != currentEntry.getRevisionId()) {
+      outdatedReasons.add(
+          Text.literal("[△] ")
+              .formatted(Formatting.AQUA)
+              .append(Text.literal("Revision ID " + currentEntry.getRevisionId() + " → " + slotRevId.get())
+                  .formatted(Formatting.GRAY))
+      );
+    }
+
+    if (outdatedReasons.isEmpty()) {
+      return null;
+    }
+
+    return outdatedReasons;
   }
 
   public static void renderItemCount(DrawContext context, int x, int y, int count) {

@@ -6,6 +6,7 @@
   "client": [
     "gui.screen.HandledScreenMixin",
     "item.ItemStackMixin",
+    "network.ClientPlayerEntityMixin",
     "network.ClientPlayerInteractionManagerMixin",
     "network.ClientPlayNetworkHandlerMixin",
     "network.PlayerListEntryMixin",

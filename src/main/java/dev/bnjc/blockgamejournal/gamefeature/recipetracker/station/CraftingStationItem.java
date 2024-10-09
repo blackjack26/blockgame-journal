@@ -3,13 +3,16 @@ package dev.bnjc.blockgamejournal.gamefeature.recipetracker.station;
 import lombok.Getter;
 import lombok.Setter;
 import net.minecraft.item.ItemStack;
+import net.minecraft.text.Text;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 @Getter
 public class CraftingStationItem {
+  private final ItemStack originalItem;
   private final ItemStack item;
   private final int slot;
 
@@ -28,7 +31,7 @@ public class CraftingStationItem {
 
   @Setter
   @Nullable
-  private Boolean outdated = null;
+  private List<Text> outdated = null;
 
   /**
    * This is used specifically for spot checking the ingredients of a recipe. We don't get the actual item stack here
@@ -40,6 +43,7 @@ public class CraftingStationItem {
   private final Map<String, Integer> expectedIngredients;
 
   public CraftingStationItem(ItemStack item, int slot) {
+    this.originalItem = item;
     this.item = item.copy();
     this.slot = slot;
     this.expectedIngredients = new HashMap<>();
@@ -50,7 +54,7 @@ public class CraftingStationItem {
   }
 
   public CraftingStationItem copy() {
-    CraftingStationItem copy = new CraftingStationItem(this.item, this.slot);
+    CraftingStationItem copy = new CraftingStationItem(this.originalItem, this.slot);
     copy.setRecipeKnown(this.recipeKnown);
     copy.setCost(this.cost);
     copy.setRequiredClass(this.requiredClass);
